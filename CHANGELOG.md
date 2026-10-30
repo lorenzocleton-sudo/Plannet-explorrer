@@ -22,6 +22,18 @@
 - Materials come from your inventory, nearby crates and the lander's hold (its drone delivers anywhere on the current world); new and existing saves get a starter kit of 40 Iron Plates, 16 Copper Wire and 8 Silicon Wafers in the lander
 - Buildings are saved per planet/moon
 
+### Stage 4: machines
+- **Drill**: sits on a mining spot, mines on its own (deeper deposits are slower), stores 30 and pushes into a nearby crate or the lander
+- **Storage Crate**: holds 200; machines within 12 m take from it and put into it
+- **Smelter**: 2 Iron Ore → Iron Plate, 2 Copper Ore → 2 Copper Wire, 2 Silicon → Silicon Wafer (auto or a chosen recipe)
+- **Fabricator**: crafts Gears and Circuits (needed for the advanced machines), the Long-range Scanner tool and suit upgrades
+- **Solar Panel**: power only while the sun is up; **Battery**: stores the daytime surplus for the night
+- **Oxygen Generator**: Ice + power → oxygen, refills your suit within 8 m
+- **Fuel Refinery**: 2 Ice + power → 1 Rocket Fuel
+- Simple connections, no belts: machines within 15 m of a solar panel or battery are powered (sources in range of each other form one grid); machines within 12 m of a crate use it as storage; the lander supplies a little power and acts as storage within 20 m
+- Interact with any machine to open its panel (status, power, storage, recipes, take items, deconstruct); interact with the lander to move items between your inventory and its hold
+- Machine labels show live status ("Smelter · Iron Plate 45%", "no power", "needs ice"); the old free drill tool is gone, drills are machines now
+
 ## v0.4 (prompt 4)
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill

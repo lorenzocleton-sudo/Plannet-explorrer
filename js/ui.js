@@ -1,7 +1,7 @@
 'use strict';
 // ---------- menus, codex, star map, HUD ----------
 const menus = {
-  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'),
+  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'), machine: $('machine'),
 };
 let menuOpenedAt = 0, menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause = 0;
 
@@ -14,6 +14,7 @@ function showMenu(name, back = null) {
   if (name === 'codex') renderCodex();
   if (name === 'map') renderMap();
   if (name === 'build') renderBuildMenu();
+  if (name === 'machine') renderPanel();
   if (document.pointerLockElement) { suppressUnlockPause = true; document.exitPointerLock(); }
 }
 function resume() {
@@ -45,7 +46,7 @@ $('pCodex').onclick = () => showMenu('codex', 'pause');
 $('pMap').onclick = () => openStarMap('pause');
 $('pOpt').onclick = () => showMenu('options', 'pause');
 $('pQuit').onclick = () => { writeSave(); showMenu('title'); };
-for (const k of ['codex', 'map', 'build']) menus[k].addEventListener('click', e => { if (e.target === menus[k] && performance.now() - menuOpenedAt > 400) goBack(); });
+for (const k of ['codex', 'map', 'build', 'machine']) menus[k].addEventListener('click', e => { if (e.target === menus[k] && performance.now() - menuOpenedAt > 400) goBack(); });
 
 function renderPause() {
   $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Inventory ${invTotal(playerInv())}/${invCap()}`;
@@ -274,7 +275,7 @@ function drawHUD(dt) {
   hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
   hx.fillText(`Temp ${Math.round(temp)}°C` + (hurtT > 0 ? (temp > 0 ? ' · TOO HOT' : ' · TOO COLD') + ` (-${hurtT.toFixed(1)} HP/s)` : temp >= HOT_LIMIT ? ' · heat suit OK' : temp <= COLD_LIMIT ? ' · cold suit OK' : ''), 20, 162);
   hx.fillStyle = '#7a86b8';
-  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Inventory ${invTotal(playerInv())}/${invCap()} · Drills ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX}`, 20, 146);
+  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Inventory ${invTotal(playerInv())}/${invCap()}`, 20, 146);
 
   const sig = fossilSignal();
   if (sig < 50) {
@@ -303,7 +304,7 @@ function drawHUD(dt) {
     for (const sp of world.spots) {
       const p = radarPoint(sp.pos, cx, cy, rad);
       if (!p) continue;
-      hx.fillStyle = sp.res.color; hx.strokeStyle = sp.drill ? '#ffc23a' : '#000';
+      hx.fillStyle = sp.res.color; hx.strokeStyle = sp.machine ? '#ffc23a' : '#000';
       hx.beginPath(); hx.moveTo(p[0], p[1] - 5); hx.lineTo(p[0] + 4, p[1]); hx.lineTo(p[0], p[1] + 5); hx.lineTo(p[0] - 4, p[1]); hx.closePath(); hx.fill(); hx.stroke();
     }
     const lp = landerVisible() && radarPoint(world.landerPos, cx, cy, rad);
@@ -329,7 +330,9 @@ function drawHUD(dt) {
   // prompt
   const near = nearestItem();
   let prompt = '';
-  if (atLander()) prompt = `Lander: samples analyzed, O₂ refilling · ${KEY.interact} Star map`;
+  const mb = nearestBuilding();
+  if (atLander()) prompt = `Lander: samples analyzed, O₂ refilling · ${KEY.interact} open the lander (storage, star map)`;
+  else if (mb && !build.active) prompt = `${KEY.interact} ${mb.def.name} · ${machineStatus(mb)}`;
   else if (toolPrompt()) prompt = toolPrompt();
   else if (near) {
     const k = TOOLS[tool].id === 'collector' ? KEY.use : KEY.interact;
@@ -341,11 +344,19 @@ function drawHUD(dt) {
     hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 124, w, 34, 10); hx.fill();
     hx.fillStyle = '#fff'; hx.fillText(prompt, VW / 2, VH - 107);
   }
-  if (drillHold > 0.15 && drillHoldSpot) {
-    const p = toScreen(_v.copy(drillHoldSpot.pos).addScaledVector(drillHoldSpot.dir, 2));
+  // progress bars: digging by hand, deconstructing
+  if (handT > 0.1 && handSpot) {
+    const p = toScreen(_v.copy(handSpot.pos).addScaledVector(handSpot.dir, 2));
     if (p) {
       hx.fillStyle = 'rgba(0,0,0,.6)'; rr(p[0] - 30, p[1], 60, 9, 4); hx.fill();
-      hx.fillStyle = '#ffc23a'; rr(p[0] - 30, p[1], 60 * Math.min(1, drillHold / PICKUP_TIME), 9, 4); hx.fill();
+      hx.fillStyle = '#ffc23a'; rr(p[0] - 30, p[1], 60 * Math.min(1, handT / HAND_MINE_TIME), 9, 4); hx.fill();
+    }
+  }
+  if (build.active && build.mode === 'remove' && build.target && build.holdT > 0) {
+    const p = toScreen(_v.copy(build.target.pos).addScaledVector(build.target.dir, 2.5));
+    if (p) {
+      hx.fillStyle = 'rgba(0,0,0,.6)'; rr(p[0] - 30, p[1], 60, 9, 4); hx.fill();
+      hx.fillStyle = '#ff6b6b'; rr(p[0] - 30, p[1], 60 * Math.min(1, build.holdT / REMOVE_HOLD), 9, 4); hx.fill();
     }
   }
   if (digTarget) {

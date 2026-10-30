@@ -16,7 +16,6 @@ const ITEMS = {
   // fabricated parts
   gear:         { name: 'Gear',          color: '#9aa3b8' },
   circuit:      { name: 'Circuit',       color: '#5fd38a' },
-  solar_cell:   { name: 'Solar Cell',    color: '#3b6fd1' },
   // refined
   fuel:         { name: 'Rocket Fuel',   color: '#ffb347' },
 };

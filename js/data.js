@@ -126,7 +126,7 @@ function pickSpecies(r, list) {
 const STARTER_KIT = { iron_plate: 40, copper_wire: 16, wafer: 8 };
 const SAVE_KEY = 'planetExplorer.save.v1', OPT_KEY = 'planetExplorer.options.v1';
 function defaultSave() {
-  return { ver: 5, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, drills: {}, upgrades: {}, inv: {}, lander: { items: Object.assign({}, STARTER_KIT) }, kit: true, bases: {} };
+  return { ver: 5, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, upgrades: {}, inv: {}, lander: { items: Object.assign({}, STARTER_KIT) }, kit: true, bases: {} };
 }
 function loadSave() {
   try {

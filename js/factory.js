@@ -2,7 +2,8 @@
 // ---------- machines: definitions, models, per-world bases ----------
 // Every machine is a simple form with a name label. Ranges keep the logistics simple:
 // machines near a power source are powered, machines near a crate (or the lander) use it as storage.
-const POWER_RANGE = 15, STORAGE_RANGE = 12, O2_RANGE = 8, BUILD_REACH = 25;
+// the lander reaches a bit further so machines just outside its landing pad still connect
+const POWER_RANGE = 15, STORAGE_RANGE = 12, O2_RANGE = 8, BUILD_REACH = 25, LANDER_LINK = 20;
 
 const MACHINES = {
   drill:      { name: 'Drill',            cost: { iron_plate: 8, copper_wire: 4 }, fp: 1.6, onSpot: true,
@@ -84,13 +85,16 @@ function loadBase(w) {
 function spawnBuilding(w, rec) {
   const dir = new THREE.Vector3().fromArray(rec.d).normalize();
   const r = w.R + groundH(dir), def = MACHINES[rec.t];
-  const b = { rec, type: rec.t, def, dir, pos: dir.clone().multiplyScalar(r), mesh: machineModel(rec.t) };
+  const b = { rec, type: rec.t, def, dir, pos: dir.clone().multiplyScalar(r), mesh: machineModel(rec.t), stores: [], grid: null };
   placeOnSurface(b.mesh, dir, r, rec.r);
   b.label = makeLabel(def.name, '#ffd98a', 0.55, false);
   b.label.position.copy(dir).multiplyScalar(r + LABEL_H[rec.t]);
   w.scene.add(b.mesh, b.label);
   w.buildings.push(b);
-  if (rec.t === 'drill' && rec.s.spot != null && w.spots[rec.s.spot]) w.spots[rec.s.spot].machine = b;
+  if (rec.t === 'drill' && rec.s.spot != null && w.spots[rec.s.spot]) {
+    const sp = w.spots[rec.s.spot];
+    sp.machine = b; b.spotRes = sp.res.id; b.spotDepth = sp.depth;
+  }
   return b;
 }
 function removeBuilding(w, b) {

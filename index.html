@@ -84,6 +84,14 @@
   #bRotate{right:112px;bottom:4px;width:80px;height:80px}
   #bCancel{right:20px;bottom:120px}
   body.cutscene #buildBar{display:none!important}
+  .warn{color:#ffb3b3}
+  .pbar{height:10px;background:#0e1430;border:1px solid #2b3566;border-radius:6px;overflow:hidden;margin:6px 0}
+  .pbar i{display:block;height:100%;background:linear-gradient(90deg,#3a5cf0,#8ef0a0)}
+  .xfer{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+  @media (max-width:640px){.xfer{grid-template-columns:1fr}}
+  .irows{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+  .irow{display:flex;align-items:center;gap:6px}
+  button.sm2{padding:5px 10px;font-size:12px}
   #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 360px);min-width:240px}
   .toast{background:rgba(16,20,42,.92);border:1px solid #3b4a8a;border-radius:8px;padding:6px 14px;font-size:14px;transition:opacity .5s;text-align:center}
   .toast.new{border-color:#ffd166;color:#ffe3a1}
@@ -220,6 +228,7 @@
 </div>
 
 <div class="overlay" id="codex"><div class="panel" id="codexBody"></div></div>
+<div class="overlay" id="machine"><div class="panel" id="machineBody" style="max-width:860px"></div></div>
 <div class="overlay" id="buildMenu"><div class="panel" id="buildBody" style="max-width:900px"></div></div>
 <div class="overlay" id="starmap">
   <div class="panel mappanel">
@@ -246,6 +255,8 @@
 <script src="js/mining.js"></script>
 <script src="js/factory.js"></script>
 <script src="js/build.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/panels.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/starmap.js"></script>
 <script src="js/cutscene.js"></script>

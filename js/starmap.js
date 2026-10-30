@@ -151,7 +151,7 @@ function bodyInfo(b) {
   const S = genSpecies(b);
   let tot = 0, got = 0;
   for (const cat in S) for (const sp of S[cat]) { tot++; if (known(sp)) got++; }
-  const drills = Object.keys(save.drills[b.id] || {}).length;
+  const drills = ((save.bases[b.id] || {}).list || []).filter(r => r.t === 'drill').length;
   return `<p>Gravity ${b.g} m/s² · Radius ${(b.R / 1000).toFixed(1)} km · Day ${Math.round(b.dayLen / 60)} min</p>
     <p>${atmoText(b)}</p>
     <p class="muted">${b.desc}</p>

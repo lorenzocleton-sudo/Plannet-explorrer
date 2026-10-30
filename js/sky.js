@@ -160,7 +160,10 @@ function updateLights(w, up, head, aim) {
   w.ambient.intensity = lerp(0.045, B.atmo ? 0.35 : 0.2, day * dim);
   const night = 1 - day * dim;
   w.lamp.intensity = night * 0.5;
-  w.helmet.intensity = smooth(0.35, 0.65, night) * 2.2;
+  const better = save.upgrades.helmet;
+  w.helmet.intensity = smooth(0.35, 0.65, night) * (better ? 3.4 : 2.2);
+  w.helmet.distance = better ? 110 : 70;
+  w.helmet.angle = better ? 0.8 : 0.62;
   if (head) {
     w.lamp.position.copy(head);
     w.helmet.position.copy(head);

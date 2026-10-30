@@ -1,7 +1,7 @@
 'use strict';
 // ---------- player, physics on a sphere, gameplay, input ----------
 // JUMP_V gives ~0.6 m jumps at Earth gravity and ~3.6 m on a Moon-like 1.62 m/s² (h = v² / 2g)
-const PICK_R = 2.6, SCAN_R = 34, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG_TIME = 1.4, JUMP_V = 3.43, WALK_SPEED = 14;
+const PICK_R = 2.6, SCAN_R0 = 34, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG_TIME = 1.4, JUMP_V = 3.43, WALK_SPEED = 14;
 
 const player = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0),
@@ -71,6 +71,7 @@ const _r = new THREE.Vector3(), _t = new THREE.Vector3(), _u = new THREE.Vector3
 
 function land(bodyId) {
   if (typeof stopBuild === 'function' && world) stopBuild();
+  if (typeof factoryChanged === 'function') factoryChanged();
   if (world) { world.scene.remove(playerMesh, playerLabel); disposeWorld(world); }
   const body = bodyById(bodyId);
   genBody(body);
@@ -130,6 +131,9 @@ function floater(pos, up, text, color = '#fff') {
 }
 
 // ---------- gameplay ----------
+// the Long-range Scanner tool doubles the pulse radius
+let SCAN_R = SCAN_R0;
+const nearestBuilding = (maxD = 3.5) => { let best = null; for (const b of world.buildings || []) { const d = b.pos.distanceTo(player.pos) - b.def.fp; if (d < maxD) { maxD = d; best = b; } } return best; };
 const atLander = () => player.pos.distanceTo(world.landerPos) < LANDER_R;
 // the lander's marker only shows up when you're close to it
 const LANDER_SHOW = 50;
@@ -138,6 +142,7 @@ const landerVisible = () => player.pos.distanceTo(world.landerPos) < LANDER_SHOW
 function doScan() {
   if (menu || scanT > 0) return;
   scanT = SCAN_CD;
+  SCAN_R = SCAN_R0 * (save.upgrades.scanner2 ? 2 : 1);
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 72).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({ color: 0xb48cff, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
   placeOnSurface(ring, player.up, player.pos.length() + 0.4);
@@ -235,7 +240,6 @@ let touchAct = false, touchInteract = false, mouseUse = false, actPrev = false, 
 const TOOLS = [
   { id: 'scanner', name: 'Scanner', icon: '📡', hint: 'Pulse to reveal buried fossils and nearby samples' },
   { id: 'collector', name: 'Collector', icon: '🧺', hint: 'Pick up samples (hold to dig up fossils)' },
-  { id: 'drill', name: 'Drill', icon: '⛏️', hint: 'Place a drill on a mining spot, collect its resources later' },
   { id: 'build', name: 'Build', icon: '🔨', hint: 'Open the build menu' },
 ];
 let tool = 1;
@@ -430,7 +434,7 @@ function update(dt) {
   const act = keys.has('e') || mouseUse || touchAct;
   const pressed = act && !actPrev;
   actPrev = act;
-  // Interact (F / INTERACT): the lander's star map, a drill, or the nearest sample - whatever is closest at hand
+  // Interact (F / INTERACT): the lander, a machine, a deposit or the nearest sample - whatever is closest at hand
   const inter = keys.has('f') || touchInteract;
   const iPressed = inter && !interPrev;
   interPrev = inter;
@@ -440,12 +444,13 @@ function update(dt) {
     const near = nearestItem(), spot = nearestSpot();
     if (tid === 'scanner' && pressed) doScan();
     if (tid === 'build' && pressed) openBuildMenu();
-    if (iPressed && atLander()) openStarMap();
-    else if (spot && inter && !drillState(spot)) handMine(spot, inter, dt);
-    else if (spot && (inter || tid === 'drill')) useDrill(act || inter, pressed || iPressed, dt);
-    else if (tid === 'drill') useDrill(act, pressed, dt);
+    // Interact: lander > machine > deposit (dig by hand) > sample
+    const mach = nearestBuilding();
+    if (iPressed && atLander()) openPanel('lander');
+    else if (iPressed && mach) openPanel(mach);
+    else if (spot && inter && !spot.machine && !mach) handMine(spot, inter, dt);
     if (!inter) handMine(null, false, dt);
-    if (near && ((act && tid === 'collector') || (inter && !spot))) {
+    if (near && ((act && tid === 'collector') || (inter && !spot && !nearestBuilding()))) {
       if (near.cat === 'fossil') {
         if (digTarget !== near) { digTarget = near; digT = 0; }
         digT += dt;
@@ -457,7 +462,7 @@ function update(dt) {
       }
     } else {
       digT = 0; digTarget = null;
-      if (iPressed && !spot && !atLander()) toast('Nothing to interact with here. Walk up to a sample, a drill spot or the lander.');
+      if (iPressed && !spot && !atLander() && !nearestBuilding()) toast('Nothing to interact with here. Walk up to a sample, a machine, a deposit or the lander.');
     }
   }
 
@@ -548,6 +553,7 @@ function syncScene() {
     it.label.visible = dist < maxD || (it.ping > 0 && dist < SCAN_R + 5);
   }
   syncMining();
+  syncFactory(1 / 60);
   updateTerrain(world, camera.position);
   if ((cellT -= 1 / 60) <= 0) { cellT = 0.25; updateSampleCells(world); }
 }

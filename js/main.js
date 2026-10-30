@@ -10,6 +10,9 @@ function frame(now) {
     if (cutscene) { renderer.render(cutsceneScene(), camera); drawCutsceneOverlay(); }
   } else if (world) {
     if (!menu) update(dt);
+    // machines keep running while you look at them (or the build menu)
+    if (!menu || menu === 'machine' || menu === 'build') factoryTick(dt);
+    panelTick(dt);
     syncScene();
     renderer.render(world.scene, camera);
   }
