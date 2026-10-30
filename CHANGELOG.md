@@ -1,6 +1,9 @@
 # Changelog
 
 ## v0.5 (prompt 5: survival factory)
+### Fix: items taken out of the lander were put straight back
+- Standing at the lander unloaded every raw resource you carried, including ore you had just taken out of the hold. Now only ore you dug up by hand is unloaded automatically; anything you take out stays in your inventory
+
 ### Fix: error after placing a Smelter
 - Placing a powered machine (Smelter, Oxygen Generator, Fuel Refinery, Fabricator) closer to a Solar Panel or Battery than to the lander crashed the power network setup ("Cannot read properties of null (reading 'users')"), and the saved base kept crashing after reload. Machines now join the nearest power source's network correctly
 
