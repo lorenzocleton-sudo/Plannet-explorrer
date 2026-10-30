@@ -266,9 +266,6 @@ function genBody(body) {
     if (dist < 30) fc.h[k] = lerp(fc.h[k], siteH, 1 - smooth(12, 28, dist));
   }
 
-  // saved terraforming, then colour everything from the final heights
-  const terra = save.terra[body.id];
-  if (terra) for (const key in terra) { const f = Math.floor(key / NV); w.faces[f].h[key % NV] += terra[key]; }
   for (const fc of w.faces) for (let k = 0; k < NV; k++) recolorVertex(w, fc, k);
 
   // scene
@@ -299,7 +296,7 @@ function genBody(body) {
     const mesh = new THREE.Mesh(geo, terrainMat);
     mesh.receiveShadow = true;
     mesh.frustumCulled = false;
-    fc.mesh = mesh; fc.pos = pos;
+    fc.mesh = mesh;
     scene.add(mesh);
   });
 

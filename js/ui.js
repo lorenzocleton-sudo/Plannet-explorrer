@@ -8,7 +8,7 @@ let menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause 
 function showMenu(name, back = null) {
   for (const k in menus) menus[k].classList.toggle('show', k === name);
   menu = name; menuBack = back;
-  keys.clear(); touchAct = touchAlt = mouseUse = mouseAlt = false;
+  keys.clear(); touchAct = mouseUse = false;
   if (name === 'pause') renderPause();
   if (name === 'options') renderOptions();
   if (name === 'codex') renderCodex();
@@ -172,9 +172,7 @@ TOOLS.forEach((T, i) => {
 });
 function renderHotbar() {
   [...hotbar.children].forEach((b, i) => b.classList.toggle('sel', i === tool));
-  $('tAct').textContent = { scanner: 'SCAN', collector: 'GRAB', drill: 'DRILL', terraform: 'RAISE' }[TOOLS[tool].id];
-  $('tAlt').style.display = TOOLS[tool].id === 'terraform' ? '' : 'none';
-  $('tBrush').style.display = TOOLS[tool].id === 'terraform' ? '' : 'none';
+  $('tAct').textContent = { scanner: 'SCAN', collector: 'GRAB', drill: 'DRILL' }[TOOLS[tool].id];
 }
 renderHotbar();
 
@@ -182,9 +180,6 @@ renderHotbar();
 const tAct = $('tAct');
 tAct.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAct.addEventListener(ev, () => { touchAct = false; }));
-const tAlt = $('tAlt');
-tAlt.addEventListener('pointerdown', e => { touchAlt = true; e.preventDefault(); });
-['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAlt.addEventListener(ev, () => { touchAlt = false; }));
 $('tScan').addEventListener('pointerdown', e => { doScan(); e.preventDefault(); });
 $('tJump').addEventListener('pointerdown', e => { jumpQueued = true; e.preventDefault(); });
 $('tCodex').addEventListener('click', () => { if (!menu) showMenu('codex'); });

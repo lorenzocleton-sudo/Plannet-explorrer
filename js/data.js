@@ -1,6 +1,6 @@
 'use strict';
 // ---------- game data: bodies, species, save, options ----------
-const VERSION = '0.3';
+const VERSION = '0.4';
 
 const CATS = {
   plant:   { label: 'Plants',       one: 'Plant',   n: 4, base: 1,  tag: '#9ef08a' },
@@ -119,7 +119,7 @@ function pickSpecies(r, list) {
 // ---------- save + options ----------
 const SAVE_KEY = 'planetExplorer.save.v1', OPT_KEY = 'planetExplorer.options.v1';
 function defaultSave() {
-  return { ver: 3, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, terra: {}, drills: {}, res: {} };
+  return { ver: 3, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, drills: {}, res: {} };
 }
 function loadSave() {
   try {
@@ -130,6 +130,7 @@ function loadSave() {
         s.collected = {};
         s.ver = 3;
       }
+      delete s.terra; // terraforming was removed in v0.4
       return Object.assign(defaultSave(), s);
     }
   } catch (e) {}

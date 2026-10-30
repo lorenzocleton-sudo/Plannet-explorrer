@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4 (prompt 4)
+### Part 0: Terraform tool removed
+- The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre
