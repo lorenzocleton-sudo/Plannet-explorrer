@@ -5,7 +5,7 @@ const PICK_R = 2.6, SCAN_R = 34, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG
 const player = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0),
   fwd: new THREE.Vector3(1, 0, 0), face: new THREE.Vector3(1, 0, 0),
-  o2: 100, onGround: true, inLiquid: false, walk: 0, fallTop: 0,
+  o2: 100, hp: 100, onGround: true, inLiquid: false, walk: 0, fallTop: 0,
 };
 const camState = { pitch: 0.35 };
 const playerMesh = new THREE.Group();
@@ -25,6 +25,8 @@ const playerLabel = makeLabel('Researcher', '#9fd8ff', 0.4, false);
 let bag = [], floaters = [];
 let scanT = 0, pickCd = 0, digT = 0, digTarget = null, lowWarned = false, fullWarnT = 0, time = 0;
 let arrival = null; // { t, text, ok }
+let hurtFlash = 0, respawned = false;
+const SAFE_FALL_ENERGY = 45, FALL_DMG = 0.8, SUFFOCATE_DPS = 12;
 
 // temp vectors
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _m = new THREE.Vector3();
@@ -64,6 +66,7 @@ function resetPlayer() {
   player.fwd.addScaledVector(d, -player.fwd.dot(d)).normalize();
   player.face.copy(player.fwd);
   player.o2 = 100;
+  player.hp = 100;
   player.onGround = true;
   player.fallTop = player.pos.length();
 }
@@ -120,13 +123,22 @@ function deposit() {
   writeSave();
 }
 
-function blackout() {
+// health hit 0: respawn at the lander and lose everything carried but not yet deposited
+function die(cause) {
   for (const it of bag) { it.taken = false; it.mesh.visible = true; }
   const lost = bag.length;
   bag = [];
   resetPlayer();
+  respawned = true;
   lowWarned = false;
-  toast(`Oxygen depleted! Rescue drone brought you back.${lost ? ` ${lost} sample${lost > 1 ? 's' : ''} lost.` : ''}`, 'bad');
+  hurtFlash = 1;
+  toast(`${cause} Rescue drone brought you back to the lander.${lost ? ` ${lost} unsaved sample${lost > 1 ? 's' : ''} lost.` : ''}`, 'bad');
+}
+function damage(amount, cause) {
+  if (amount <= 0) return;
+  player.hp -= amount;
+  hurtFlash = Math.min(1, hurtFlash + amount / 40);
+  if (player.hp <= 0) die(cause);
 }
 
 function collect(it) {
@@ -274,7 +286,11 @@ function update(dt) {
   player.inLiquid = world.hasSea && gh < -0.3;
   const r0 = player.pos.length();
   if (r0 <= floorR || (player.onGround && r0 - floorR < 0.6 && vr <= 0.5)) {
-    if (!player.onGround) onLanded(player.fallTop - floorR);
+    if (!player.onGround) {
+      respawned = false;
+      onLanded(player.fallTop - floorR);
+      if (respawned) return;
+    }
     player.pos.copy(nu).multiplyScalar(floorR);
     const vrn = player.vel.dot(nu);
     if (vrn < 0) player.vel.addScaledVector(nu, -vrn);
@@ -294,6 +310,7 @@ function update(dt) {
   // oxygen & lander
   if (atLander()) {
     player.o2 = Math.min(100, player.o2 + 50 * dt);
+    player.hp = Math.min(100, player.hp + 20 * dt);
     if (player.o2 > 30) lowWarned = false;
     if (bag.length) deposit();
   } else if (B.breathable && !player.inLiquid) {
@@ -301,7 +318,7 @@ function update(dt) {
   } else {
     player.o2 -= B.o2 * (player.inLiquid && !B.breathable ? 2.5 : 1) * dt;
     if (player.o2 < 25 && !lowWarned) { lowWarned = true; toast('Oxygen low! Head back to the lander.', 'bad'); }
-    if (player.o2 <= 0) blackout();
+    if (player.o2 <= 0) { player.o2 = 0; damage(SUFFOCATE_DPS * dt, 'You suffocated!'); }
   }
 
   // collecting / digging
@@ -350,9 +367,20 @@ function update(dt) {
   for (const fl of floaters) { fl.t += dt; fl.pos.addScaledVector(fl.up, 1.6 * dt); }
   floaters = floaters.filter(fl => fl.t < 1.4);
   if (arrival) { arrival.t += dt; if (arrival.t > 5) arrival = null; }
+  hurtFlash = Math.max(0, hurtFlash - dt * 1.5);
 }
 
-function onLanded(fallHeight) { /* fall damage arrives in stage 2 */ }
+// fall damage scales with fall height AND local gravity (impact energy per kg = g·h),
+// so the same drop hurts far less on a low-gravity moon. Liquid breaks the fall.
+function onLanded(fallHeight) {
+  if (player.inLiquid || fallHeight <= 0) return;
+  const energy = world.body.g * fallHeight;
+  const dmg = Math.round(Math.max(0, energy - SAFE_FALL_ENERGY) * FALL_DMG);
+  if (dmg > 0) {
+    floater(player.pos, player.up, `-${dmg} HP (fell ${fallHeight.toFixed(0)} m)`, '#ff8d8d');
+    damage(dmg, `Fatal fall (${fallHeight.toFixed(0)} m)!`);
+  }
+}
 
 // ---------- sync 3D scene with game state ----------
 function syncScene() {

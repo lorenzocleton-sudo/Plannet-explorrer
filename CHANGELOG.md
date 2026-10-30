@@ -10,6 +10,12 @@
 - Day and night sides, a starry sky, the sun, and moons / parent planet visible in the sky
 - New radar minimap that rotates with your view
 
+### Stage 2: health and fall damage
+- Health bar in the HUD; health refills at the lander
+- Fall damage uses fall height × local gravity, so the same drop hurts much less on a low-gravity moon; landing in liquid is safe
+- Running out of oxygen now hurts you instead of instantly knocking you out
+- At 0 health you respawn at the lander and lose the unsaved samples you were carrying
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

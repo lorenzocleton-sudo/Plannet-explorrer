@@ -243,30 +243,37 @@ function drawHUD(dt) {
   hx.clearRect(0, 0, VW, VH);
   if (!world || menu === 'title') return;
   const B = world.body;
+  if (hurtFlash > 0) {
+    const g = hx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.3, VW / 2, VH / 2, Math.max(VW, VH) * 0.7);
+    g.addColorStop(0, 'rgba(255,0,0,0)'); g.addColorStop(1, `rgba(255,30,30,${0.55 * hurtFlash})`);
+    hx.fillStyle = g; hx.fillRect(0, 0, VW, VH);
+  }
   hx.textAlign = 'left';
-  hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 220, 140, 10); hx.fill();
+  hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 220, 162, 10); hx.fill();
   hx.fillStyle = '#9fd8ff'; hx.font = 'bold 16px system-ui,sans-serif'; hx.textBaseline = 'top';
   hx.fillText(B.name, 20, 18);
   hx.fillStyle = '#ffd166'; hx.font = '13px system-ui,sans-serif'; hx.textAlign = 'right';
   hx.fillText(save.rp + ' RP', 220, 20); hx.textAlign = 'left';
   hx.fillStyle = B.breathable ? '#8ef0a0' : '#ff9d9d'; hx.font = '11px system-ui,sans-serif';
   hx.fillText((B.breathable ? 'Breathable air' : 'No oxygen') + ` · g ${B.g.toFixed(1)} m/s²`, 20, 38);
+  const hpc = player.hp < 30 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#e8566b';
+  bar(20, 56, 200, 16, player.hp / 100, hpc, `Health ${Math.ceil(player.hp)}`);
   const o2c = player.o2 < 25 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#3ad0ff';
-  bar(20, 56, 200, 16, player.o2 / 100, o2c, `O₂ ${Math.ceil(player.o2)}%`);
-  bar(20, 78, 200, 16, bag.length / BAG_MAX, bag.length >= BAG_MAX ? '#e0703a' : '#6bbf59', `Backpack ${bag.length}/${BAG_MAX}`);
-  bar(20, 100, 200, 16, 1 - scanT / SCAN_CD, scanT > 0 ? '#555d88' : '#b48cff', scanT > 0 ? `Scanner ${scanT.toFixed(1)}s` : 'Scanner ready [Q]');
+  bar(20, 78, 200, 16, player.o2 / 100, o2c, `O₂ ${Math.ceil(player.o2)}%`);
+  bar(20, 100, 200, 16, bag.length / BAG_MAX, bag.length >= BAG_MAX ? '#e0703a' : '#6bbf59', `Backpack ${bag.length}/${BAG_MAX}`);
+  bar(20, 122, 200, 16, 1 - scanT / SCAN_CD, scanT > 0 ? '#555d88' : '#b48cff', scanT > 0 ? `Scanner ${scanT.toFixed(1)}s` : 'Scanner ready [Q]');
   hx.fillStyle = '#7a86b8'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
-  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m`, 20, 124);
+  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m`, 20, 146);
 
   const sig = fossilSignal();
   if (sig < 50) {
     const bars = sig < 15 ? 3 : sig < 30 ? 2 : 1;
-    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 156, 220, 26, 8); hx.fill();
+    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 178, 220, 26, 8); hx.fill();
     hx.fillStyle = '#ffd166'; hx.font = '12px system-ui,sans-serif'; hx.textBaseline = 'middle';
-    hx.fillText('Ancient life signal', 20, 169);
+    hx.fillText('Ancient life signal', 20, 191);
     for (let i = 0; i < 3; i++) {
       hx.fillStyle = i < bars ? '#ffd166' : 'rgba(255,255,255,.15)';
-      hx.fillRect(170 + i * 14, 174 - (i + 1) * 4, 10, (i + 1) * 4);
+      hx.fillRect(170 + i * 14, 196 - (i + 1) * 4, 10, (i + 1) * 4);
     }
   }
 
