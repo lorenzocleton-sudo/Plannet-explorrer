@@ -48,9 +48,9 @@ PLANETS.forEach((P, i) => {
     Object.assign(M, {
       id: P.id + 'm' + k, type: 'moon', parent: P, idx: i, k, seed, speciesKey: P.id + 'm' + k,
       breathable: false, o2: P.o2 * 1.1 + 0.2, speed: 1, grip: M.ice ? 5 : 10, atmo: null,
-      land: 9, mount: 24, cost: 0,
+      land: 40 + M.R / 40, mount: 0, cost: 0,
       desc: `${M.ice ? 'Icy' : 'Dusty'} moon of ${P.name}. Low gravity.`,
-      col: { dust: [hue, 8 + rnd() * 14 | 0, 50 + rnd() * 14 | 0], rock: [(hue + 25) % 360, 6 + rnd() * 10 | 0, 30 + rnd() * 10 | 0], ice: [195, 45, 84] },
+      col: { dust: [hue, 3 + rnd() * 6 | 0, 56 + rnd() * 10 | 0], mare: [hue, 4, 33 + rnd() * 6 | 0], rock: [hue, 3, 42 + rnd() * 6 | 0], ice: [200, 30, 88] },
     });
     BODIES.push(M);
   });

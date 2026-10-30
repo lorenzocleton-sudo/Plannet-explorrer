@@ -24,6 +24,12 @@
 - Umbros and all moons have no atmosphere: black sky with stars and no clouds
 - Distance haze matches the sky colour and clears when you fly above the air
 
+### Part 4: real-looking moons
+- Grey, dusty moon surfaces with gentle highlands, darker flat "maria" plains, and rockier slopes
+- Craters at four size classes, from ~200 m basins with flat floors and raised rims down to small pits a few metres across
+- Icy moons (Vesk, Nyx, Mora, Ixa) have bright ice fields blended into the dust
+- Still no air (black sky, stars) and only rock, dust and sometimes ice to collect
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

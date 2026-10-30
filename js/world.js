@@ -11,7 +11,6 @@ const FACES = [
 ].map(([n, u, v]) => ({ n: new THREE.Vector3(...n), u: new THREE.Vector3(...u), v: new THREE.Vector3(...v) }));
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SUN_DIR = new THREE.Vector3(0.55, 0.62, 0.56).normalize();
-const MOON_BIOMES = ['dust', 'rock', 'ice'];
 const LANDER_R = 9;
 
 let world = null;
@@ -60,33 +59,49 @@ function planetHeight(body, x, y, z) {
 function rawHeight(body, d) {
   const x = d.x, y = d.y, z = d.z, s = body.seed, R = body.R;
   if (body.type === 'planet') return planetHeight(body, x, y, z);
-  const c = (fbm3(x * 1.8, y * 1.8, z * 1.8, s, 4) - 0.5) * 4;
-  const r = ridged3(x * 3.5, y * 3.5, z * 3.5, s + 11, 4);
-  let h = c * body.land + r * r * body.mount;
-  for (const cr of body.craters) {
-    const dt = x * cr.x + y * cr.y + z * cr.z;
-    if (dt < cr.cosOuter) continue;
-    const t = Math.acos(Math.min(1, dt)) / cr.r;
-    h += t < 1 ? (t * t - 1) * cr.depth : (1 - (t - 1) / 0.4) * cr.depth * 0.35;
-  }
-  h += (vnoise3(x * R / 5, y * R / 5, z * R / 5, s + 3) - 0.5) * 0.8;
+  return moonHeight(body, x, y, z);
+}
+
+// Moons: gentle highlands, dark flat "maria" plains, and craters of many sizes.
+// Craters come from a 3D cell grid per size class: each cell may hold one crater, and only the
+// 8 cells nearest the point need checking, so this stays cheap however many craters there are.
+const CRATER_SCALES = [{ k: 0.45, p: 0.7 }, { cell: 200, p: 0.8 }, { cell: 64, p: 0.85 }, { cell: 20, p: 0.9 }];
+function craterField(body, px, py, pz) {
+  let h = 0;
+  CRATER_SCALES.forEach((S, si) => {
+    const cs = S.cell || body.R * S.k, seed = body.seed + 1000 + si * 77;
+    const gx = Math.floor(px / cs - 0.5), gy = Math.floor(py / cs - 0.5), gz = Math.floor(pz / cs - 0.5);
+    for (let i = gx; i <= gx + 1; i++) for (let j = gy; j <= gy + 1; j++) for (let k = gz; k <= gz + 1; k++) {
+      if (hash3(i, j, k, seed) > S.p) continue;
+      let cx = (i + 0.2 + 0.6 * hash3(i, j, k, seed + 1)) * cs, cy = (j + 0.2 + 0.6 * hash3(i, j, k, seed + 2)) * cs, cz = (k + 0.2 + 0.6 * hash3(i, j, k, seed + 3)) * cs;
+      // only cells the surface passes through hold craters (keeps every crater within the 8 checked cells)
+      const cl = Math.hypot(cx, cy, cz);
+      if (Math.abs(cl - body.R) > cs * 0.25) continue;
+      const f = body.R / cl;
+      cx *= f; cy *= f; cz *= f;
+      const r = cs * (0.12 + 0.18 * hash3(i, j, k, seed + 4));
+      const t = Math.hypot(px - cx, py - cy, pz - cz) / r;
+      if (t >= 1.5) continue;
+      const depth = r * 0.24, rim = r * 0.05;
+      h += t < 1 ? Math.max(depth * (t * t - 1), -depth * 0.82) + rim * t * t * t * t : rim * (1 - smooth(1, 1.5, t));
+    }
+  });
   return h;
 }
-function makeCraters(body) {
-  if (body.craters) return;
-  const rnd = mulberry32(body.seed * 5 + 2), d = new THREE.Vector3();
-  body.craters = [];
-  if (body.type !== 'moon') return;
-  for (let i = 0; i < 34; i++) {
-    randDir(rnd, d);
-    const r = (3 + rnd() * rnd() * 22) / body.R;
-    body.craters.push({ x: d.x, y: d.y, z: d.z, r, cosOuter: Math.cos(r * 1.4), depth: r * body.R * (0.18 + rnd() * 0.12) });
-  }
+const mareMask = (body, x, y, z) => smooth(0.53, 0.6, fbm3(x * 1.3 + 3, y * 1.3, z * 1.3, body.seed + 50, 3));
+function moonHeight(body, x, y, z) {
+  const s = body.seed, R = body.R, k = R / 600;
+  let h = (fbm3(x * 1.6, y * 1.6, z * 1.6, s, 4) - 0.5) * 2 * body.land;
+  h += (fbm3(x * k, y * k, z * k, s + 4, 3) - 0.5) * 2 * 14;
+  const mare = mareMask(body, x, y, z);
+  h = lerp(h, -body.land * 0.3, mare);
+  h += craterField(body, x * R, y * R, z * R) * (1 - mare * 0.5);
+  return h + (vnoise3(x * R / 6, y * R / 6, z * R / 6, s + 3) - 0.5) * 0.5;
 }
+
 // landing site (cached per body); the ground is flattened into a pad around it
 function siteOf(body) {
   if (!body.site) {
-    makeCraters(body);
     const L = findSite(body, mulberry32(body.seed * 17 + 9));
     body.site = { L, h: Math.max(body.type === 'planet' ? 2 : -1e9, rawHeight(body, L)), cosOuter: Math.cos(30 / body.R) };
   }
@@ -101,15 +116,22 @@ function heightAt(body, d) {
 }
 function biomeOf(body, h, d) {
   if (body.type === 'planet') return h < 0 ? 0 : h < body.hRocky ? 1 : h < body.hCrystal ? 2 : 3;
-  if (body.ice && fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3) > 0.55) return 2;
-  return h > 3 + (vnoise3(d.x * body.R / 25, d.y * body.R / 25, d.z * body.R / 25, body.seed + 9) - 0.5) * 8 ? 1 : 0;
+  if (body.ice && fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3) > 0.56) return 2;
+  return h > body.land * 0.35 + (vnoise3(d.x * body.R / 40, d.y * body.R / 40, d.z * body.R / 40, body.seed + 9) - 0.5) * 20 ? 1 : 0;
 }
 // slope = how flat the ground is (1 = level, 0 = vertical cliff)
 function colorOf(body, b, h, d, slope = 1) {
   const R = body.R, C = body.col;
   const tint = (vnoise3(d.x * R / 60, d.y * R / 60, d.z * R / 60, body.seed + 99) - 0.5) * 10
              + (vnoise3(d.x * R / 9, d.y * R / 9, d.z * R / 9, body.seed + 98) - 0.5) * 5;
-  if (body.type !== 'planet') { const [hh, s, l] = C[MOON_BIOMES[b]]; return hsl2rgb(hh, s, l + tint); }
+  if (body.type !== 'planet') {
+    // grey dust, darker maria, rockier highlands and slopes, bright ice patches
+    const mix = (a, c2, t) => [lerp(a[0], c2[0], t), lerp(a[1], c2[1], t), lerp(a[2], c2[2], t)];
+    let col = mix(C.dust, C.mare, mareMask(body, d.x, d.y, d.z));
+    col = mix(col, C.rock, Math.max(b === 1 ? 0.6 : 0, smooth(0.9, 0.72, slope)));
+    if (body.ice) col = mix(col, C.ice, smooth(0.53, 0.59, fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3)));
+    return hsl2rgb(col[0], col[1], col[2] + tint * 0.8);
+  }
   let col;
   const mix = (a, c2, t) => [lerp(a[0], c2[0], t), lerp(a[1], c2[1], t), lerp(a[2], c2[2], t)];
   if (h < 0) col = [C.liquid[0], C.liquid[1], C.liquid[2] + 6 - Math.min(24, -h * 0.25)];
