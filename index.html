@@ -7,9 +7,11 @@
 <style>
   html,body{margin:0;height:100%;background:#05060d;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#e6ecff;touch-action:none;user-select:none;-webkit-user-select:none}
   canvas{display:block}
-  .overlay{position:fixed;inset:0;background:rgba(5,6,15,.86);display:none;align-items:center;justify-content:center;z-index:10}
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:2}
+  .overlay{position:fixed;inset:0;background:rgba(5,6,15,.82);display:none;align-items:center;justify-content:center;z-index:10}
   .overlay.show{display:flex}
   .panel{background:#10142a;border:2px solid #3b4a8a;border-radius:14px;padding:20px 24px;max-width:760px;width:calc(100% - 32px);max-height:86vh;overflow:auto;box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  .panel.narrow{max-width:380px;text-align:center}
   h1{margin:0 0 4px;font-size:34px;letter-spacing:3px;color:#9fd8ff}
   h2{margin:0 0 6px;color:#9fd8ff}
   h3{margin:18px 0 8px;color:#c8b6ff;border-bottom:1px solid #2b3566;padding-bottom:4px}
@@ -21,7 +23,9 @@
   button{background:#2b4bd1;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:16px;cursor:pointer;font-family:inherit}
   button:hover{background:#3a5cf0}
   button:disabled{background:#2a2f4a;color:#6c7399;cursor:default}
-  button.ghost{background:transparent;border:1px solid #3b4a8a;color:#8f9bc8;font-size:13px;padding:6px 12px}
+  button.ghost{background:transparent;border:1px solid #3b4a8a;color:#8f9bc8}
+  button.danger{background:#8a2a3a}
+  .stack{display:flex;flex-direction:column;gap:10px;margin-top:14px}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
   .card{background:#161c3a;border:1px solid #27305e;border-radius:10px;padding:8px;display:flex;gap:8px;align-items:center;font-size:13px}
@@ -34,25 +38,31 @@
   .pcard.cur{border-color:#7fd1ff}
   .orb{width:70px;height:70px;border-radius:50%;margin:4px auto 8px;box-shadow:inset -12px -10px 20px rgba(0,0,0,.55)}
   .pcard p{margin:4px 0;font-size:13px}
-  #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 340px);min-width:240px}
+  .opt{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:center;margin-top:10px}
+  .opt label{color:#c3cbef;font-size:15px}
+  .opt input[type=range]{width:100%}
+  .opt select{background:#1f2750;color:#fff;border:1px solid #3b4a8a;border-radius:6px;padding:6px;font-size:14px}
+  .opt input[type=checkbox]{width:20px;height:20px;justify-self:start}
+  .opt .val{color:#7a86b8;font-size:12px;margin-left:6px}
+  #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 360px);min-width:240px}
   .toast{background:rgba(16,20,42,.92);border:1px solid #3b4a8a;border-radius:8px;padding:6px 14px;font-size:14px;transition:opacity .5s;text-align:center}
   .toast.new{border-color:#ffd166;color:#ffe3a1}
   .toast.bad{border-color:#ff6b6b;color:#ffb3b3}
   #touch{position:fixed;right:12px;bottom:12px;display:none;gap:10px;z-index:5;flex-direction:column;align-items:flex-end}
   #touch.show{display:flex}
   #touch .r{display:flex;gap:10px}
-  #touch button{width:74px;height:74px;border-radius:50%;padding:0;font-size:14px;font-weight:700;background:rgba(43,75,209,.75)}
-  #touch button.sm{width:56px;height:56px;font-size:12px;background:rgba(40,48,90,.8)}
-  @media (max-width:600px){#toasts{width:calc(100% - 24px);top:auto;bottom:190px}}
+  #touch button{width:70px;height:70px;border-radius:50%;padding:0;font-size:13px;font-weight:700;background:rgba(43,75,209,.75)}
+  #touch button.sm{width:52px;height:52px;font-size:11px;background:rgba(40,48,90,.8)}
+  @media (max-width:600px){#toasts{width:calc(100% - 24px);top:auto;bottom:200px}}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="hud"></canvas>
 <div id="toasts"></div>
 
 <div id="touch">
-  <div class="r"><button class="sm" id="tCodex">CODEX</button><button class="sm" id="tMap">MAP</button></div>
-  <div class="r"><button id="tScan">SCAN</button><button id="tAct">GRAB</button></div>
+  <div class="r"><button class="sm" id="tPause">II</button><button class="sm" id="tCodex">CODEX</button><button class="sm" id="tMap">MAP</button></div>
+  <div class="r"><button id="tJump">JUMP</button><button id="tScan">SCAN</button><button id="tAct">GRAB</button></div>
 </div>
 
 <div class="overlay show" id="title">
@@ -62,16 +72,66 @@
     <p class="sub">You are a planetary researcher. Collect plants, rocks and minerals, and scan the ground for buried traces of ancient life. Bring your samples back to the lander to analyze them, earn Research Points and unlock new worlds.</p>
     <ul class="ctl">
       <li><kbd>WASD</kbd> / <kbd>Arrows</kbd> move</li>
-      <li><kbd>E</kbd> / <kbd>Space</kbd> collect (hold to dig)</li>
+      <li><kbd>Mouse</kbd> look (click to capture)</li>
+      <li><kbd>Space</kbd> jump</li>
+      <li><kbd>E</kbd> collect (hold to dig)</li>
       <li><kbd>Q</kbd> scanner pulse</li>
       <li><kbd>C</kbd> research codex</li>
       <li><kbd>M</kbd> star map (at lander)</li>
-      <li><kbd>Esc</kbd> close menus</li>
+      <li><kbd>Esc</kbd> / <kbd>P</kbd> pause</li>
     </ul>
     <p class="muted" style="font-size:13px">Watch your oxygen! Liquid pools slow you down and drain oxygen faster. If you black out, a rescue drone brings you back, but your carried samples are lost.</p>
     <div class="row">
       <button id="startBtn">Start Expedition</button>
-      <button class="ghost" id="resetBtn">Reset progress</button>
+      <button class="ghost" id="titleOptBtn">Options</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pause">
+  <div class="panel narrow">
+    <h2>Paused</h2>
+    <p class="sub" id="pauseInfo"></p>
+    <div class="stack">
+      <button id="pResume">Resume</button>
+      <button class="ghost" id="pCodex">Research Codex</button>
+      <button class="ghost" id="pMap">Star Map</button>
+      <button class="ghost" id="pOpt">Options</button>
+      <button class="ghost" id="pQuit">Save &amp; Quit to Title</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="options">
+  <div class="panel" style="max-width:520px">
+    <h2>Options</h2>
+    <h4>Controls</h4>
+    <div class="opt">
+      <label for="oSens">Mouse sensitivity <span class="val" id="vSens"></span></label><input type="range" id="oSens" min="0.2" max="3" step="0.1">
+      <label for="oInvert">Invert Y axis</label><input type="checkbox" id="oInvert">
+    </div>
+    <h4>Camera</h4>
+    <div class="opt">
+      <label for="oDist">Camera distance <span class="val" id="vDist"></span></label><input type="range" id="oDist" min="4" max="20" step="0.5">
+      <label for="oFov">Field of view <span class="val" id="vFov"></span></label><input type="range" id="oFov" min="50" max="100" step="1">
+    </div>
+    <h4>Display</h4>
+    <div class="opt">
+      <label for="oLabels">Name labels</label>
+      <select id="oLabels"><option value="near">Nearby only</option><option value="far">Far</option><option value="always">Always</option><option value="off">Off</option></select>
+      <label for="oMinimap">Show minimap</label><input type="checkbox" id="oMinimap">
+      <label for="oFps">Show FPS</label><input type="checkbox" id="oFps">
+    </div>
+    <h4>Graphics</h4>
+    <div class="opt">
+      <label for="oQuality">Render quality</label>
+      <select id="oQuality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+      <label for="oShadows">Shadows</label><input type="checkbox" id="oShadows">
+    </div>
+    <div class="row">
+      <button id="oBack">Back</button>
+      <button class="ghost" id="oDefaults">Restore defaults</button>
+      <button class="danger" id="oReset">Reset progress</button>
     </div>
   </div>
 </div>
@@ -79,34 +139,37 @@
 <div class="overlay" id="codex"><div class="panel" id="codexBody"></div></div>
 <div class="overlay" id="starmap"><div class="panel" id="mapBody"></div></div>
 
+<script src="lib/three.min.js"></script>
 <script>
 'use strict';
-const VERSION = '0.1';
+const VERSION = '0.2';
 
-// ---------- constants ----------
-const WORLD = 4000, CELL = 16, GRID = WORLD / CELL;
-const LANDER = { x: WORLD / 2, y: WORLD / 2 };
-const LANDER_R = 90, PICK_R = 42, SCAN_R = 340, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG_TIME = 1.4;
+// ---------- constants (world units: 1 unit ~ 1 metre) ----------
+const WORLD = 400, GRID = 200, CELL = WORLD / GRID, N = GRID + 1;
+const LANDER = { x: WORLD / 2, z: WORLD / 2 };
+const LANDER_R = 9, PICK_R = 2.6, SCAN_R = 34, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG_TIME = 1.4;
+const WATER_Y = 0, WADE_Y = -1.0;
 const BIOMES = ['liquid', 'plains', 'rocky', 'crystal'];
+const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
 const CATS = {
-  plant:   { label: 'Plants',       one: 'Plant',   n: 4, base: 1 },
-  rock:    { label: 'Rocks',        one: 'Rock',    n: 3, base: 1 },
-  mineral: { label: 'Minerals',     one: 'Mineral', n: 4, base: 3 },
-  fossil:  { label: 'Ancient Life', one: 'Fossil',  n: 3, base: 10 },
+  plant:   { label: 'Plants',       one: 'Plant',   n: 4, base: 1,  tag: '#9ef08a' },
+  rock:    { label: 'Rocks',        one: 'Rock',    n: 3, base: 1,  tag: '#d6dae4' },
+  mineral: { label: 'Minerals',     one: 'Mineral', n: 4, base: 3,  tag: '#d2b4ff' },
+  fossil:  { label: 'Ancient Life', one: 'Fossil',  n: 3, base: 10, tag: '#ffd166' },
 };
 
 // biome colors are [hue, sat, light]
 const PLANETS = [
-  { name: 'Verdara', seed: 1101, cost: 0, o2: 1.0, speed: 1.0, grip: 10, desc: 'Mild, lush starter world.',
+  { name: 'Verdara', seed: 1101, cost: 0, o2: 1.0, speed: 1.0, grip: 10, grav: 25, sky: '#8fc7ff', desc: 'Mild, lush starter world.',
     col: { liquid: [200, 55, 34], plains: [105, 38, 36], rocky: [32, 18, 38], crystal: [265, 30, 52] } },
-  { name: 'Ruska', seed: 2207, cost: 40, o2: 1.4, speed: 0.95, grip: 10, desc: 'Rust-red dunes and iron cliffs.',
+  { name: 'Ruska', seed: 2207, cost: 40, o2: 1.4, speed: 0.95, grip: 10, grav: 27, sky: '#e2a27c', desc: 'Rust-red dunes and iron cliffs.',
     col: { liquid: [12, 70, 28], plains: [20, 45, 40], rocky: [10, 28, 30], crystal: [40, 65, 52] } },
-  { name: 'Glacia', seed: 3301, cost: 100, o2: 1.7, speed: 1.1, grip: 2.2, desc: 'Frozen world. The ice is slippery!',
+  { name: 'Glacia', seed: 3301, cost: 100, o2: 1.7, speed: 1.1, grip: 2.2, grav: 20, sky: '#cfe6ff', desc: 'Frozen world. The ice is slippery!',
     col: { liquid: [198, 60, 38], plains: [200, 28, 78], rocky: [212, 14, 55], crystal: [180, 60, 68] } },
-  { name: 'Umbros', seed: 4409, cost: 200, o2: 2.0, speed: 1.0, grip: 10, dark: true, desc: 'Eternal night. Your lamp only reaches so far.',
+  { name: 'Umbros', seed: 4409, cost: 200, o2: 2.0, speed: 1.0, grip: 10, grav: 25, sky: '#04030a', dark: true, desc: 'Eternal night. Your lamp only reaches so far.',
     col: { liquid: [280, 50, 20], plains: [268, 25, 30], rocky: [250, 12, 24], crystal: [300, 70, 52] } },
-  { name: 'Xeno Prime', seed: 5503, cost: 350, o2: 2.4, speed: 0.9, grip: 8, desc: 'Toxic jungle world. Rich in ancient life.',
+  { name: 'Xeno Prime', seed: 5503, cost: 350, o2: 2.4, speed: 0.9, grip: 8, grav: 30, sky: '#b9c66e', desc: 'Toxic jungle world. Rich in ancient life.',
     col: { liquid: [80, 80, 32], plains: [62, 40, 34], rocky: [40, 20, 30], crystal: [150, 70, 52] } },
 ];
 
@@ -140,10 +203,11 @@ function hsl2rgb(h, s, l) {
   s /= 100; l = Math.max(0, Math.min(100, l)) / 100;
   const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
   const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return [f(0) * 255, f(8) * 255, f(4) * 255];
+  return [f(0), f(8), f(4)];
 }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const pick = (rnd, arr) => arr[Math.floor(rnd() * arr.length)];
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 // ---------- procedural species ----------
 const SYL = ['ka', 'lo', 've', 'ri', 'zu', 'tha', 'mor', 'xi', 'el', 'qua', 'ny', 'sor', 'bel', 'dra', 'phi', 'on', 'ix', 'ur', 'sa', 'tem', 'gal', 'vor'];
@@ -176,85 +240,28 @@ function genSpecies(idx) {
       else if (cat === 'rock') color = `hsl(${hue},${8 + rnd() * 18 | 0}%,${38 + rnd() * 22 | 0}%)`;
       else if (cat === 'mineral') color = `hsl(${hue},85%,${58 + rnd() * 12 | 0}%)`;
       else color = `hsl(${35 + rnd() * 15 | 0},25%,${75 + rnd() * 10 | 0}%)`;
-      const jitter = [];
-      for (let k = 0; k < 10; k++) jitter.push(0.72 + rnd() * 0.3);
+      for (let k = 0; k < 10; k++) rnd(); // keep the sequence stable with v0.1 saves
       out[cat].push({
         id: `${idx}-${cat}-${i}`, cat, idx: i, name: makeName(rnd, cat), color,
         value: Math.round(CATS[cat].base * (1 + i * 0.6) * mult),
         weight: 1 / Math.pow(i + 1, 1.4),
         size: 9 + rnd() * 6,
-        petals: 3 + Math.floor(rnd() * 5),
-        sides: 5 + Math.floor(rnd() * 4),
-        crystals: 2 + Math.floor(rnd() * 3),
-        jitter,
-        ftype: i % 3,
-        age: Math.floor(40 + rnd() * 900),
+        age: (rnd(), rnd(), rnd(), Math.floor(40 + rnd() * 900)),
       });
     }
   }
   return (speciesCache[idx] = out);
 }
-function pickSpecies(rnd, list) {
+function pickSpecies(r, list) {
   let tot = 0;
   for (const s of list) tot += s.weight;
-  let r = rnd() * tot;
+  r *= tot;
   for (const s of list) { r -= s.weight; if (r <= 0) return s; }
   return list[list.length - 1];
 }
 
-// ---------- planet generation ----------
-function genPlanet(idx) {
-  const P = PLANETS[idx];
-  const biome = new Uint8Array(GRID * GRID);
-  const tc = document.createElement('canvas');
-  tc.width = tc.height = GRID;
-  const tx = tc.getContext('2d');
-  const img = tx.createImageData(GRID, GRID);
-  const c = GRID / 2;
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
-      let h = fbm(x / 38, y / 38, P.seed);
-      if (Math.hypot(x - c, y - c) < 16) h = Math.max(h, 0.45); // dry landing zone
-      const b = h < 0.38 ? 0 : h < 0.52 ? 1 : h < 0.62 ? 2 : 3;
-      biome[y * GRID + x] = b;
-      const [hh, s, l] = P.col[BIOMES[b]];
-      let L = l + (fbm(x / 5, y / 5, P.seed + 99) - 0.5) * 14;
-      if (b === 0) L -= (0.38 - h) * 50;
-      if (b === 3) L += (h - 0.62) * 40;
-      const [r, g, bl] = hsl2rgb(hh, s, L);
-      const o = (y * GRID + x) * 4;
-      img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = bl; img.data[o + 3] = 255;
-    }
-  }
-  tx.putImageData(img, 0, 0);
-
-  const species = genSpecies(idx);
-  const rnd = mulberry32(P.seed * 13 + 5);
-  const collected = new Set(save.collected[idx] || []);
-  const items = [], decor = [];
-  for (let k = 0; k < 1300; k++) {
-    const x = 60 + rnd() * (WORLD - 120), y = 60 + rnd() * (WORLD - 120);
-    const r = rnd(), sr = rnd(), rot = rnd() * Math.PI * 2;
-    if (Math.hypot(x - LANDER.x, y - LANDER.y) < 160) continue;
-    const b = biome[Math.floor(y / CELL) * GRID + Math.floor(x / CELL)];
-    let cat = null;
-    if (b === 0) { if (r < 0.04) cat = 'plant'; }
-    else if (b === 1) { if (r < 0.18) cat = 'plant'; else if (r < 0.21) cat = 'fossil'; else if (r < 0.22) cat = 'rock'; }
-    else if (b === 2) { if (r < 0.13) cat = 'rock'; else if (r < 0.16) cat = 'fossil'; else if (r < 0.18) cat = 'mineral'; }
-    else { if (r < 0.16) cat = 'mineral'; else if (r < 0.2) cat = 'rock'; else if (r < 0.21) cat = 'fossil'; }
-    if (!cat || collected.has(k)) continue;
-    const list = species[cat];
-    const sp = pickSpecies(() => sr, list);
-    items.push({ id: k, cat, sp, x, y, rot, revealed: cat !== 'fossil', ping: 0, taken: false });
-  }
-  for (let k = 0; k < 900; k++) {
-    decor.push({ x: rnd() * WORLD, y: rnd() * WORLD, r: 2 + rnd() * 6, crater: rnd() < 0.18 });
-  }
-  return { idx, P, biome, tc, species, items, decor };
-}
-
-// ---------- save ----------
-const SAVE_KEY = 'planetExplorer.save.v1';
+// ---------- save + options ----------
+const SAVE_KEY = 'planetExplorer.save.v1', OPT_KEY = 'planetExplorer.options.v1';
 function defaultSave() { return { rp: 0, unlocked: [0], current: 0, codex: {}, collected: {} }; }
 function loadSave() {
   try {
@@ -266,40 +273,283 @@ function loadSave() {
 function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 let save = loadSave();
 
-// ---------- state ----------
-const cv = document.getElementById('game'), ctx = cv.getContext('2d');
-let VW = 0, VH = 0, DPR = 1;
-let world = null;
-const player = { x: LANDER.x, y: LANDER.y + 70, vx: 0, vy: 0, ang: Math.PI / 2, o2: 100, walk: 0 };
-let bag = [], pulses = [], floaters = [], particles = [];
-let scanT = 0, pickCd = 0, digT = 0, digTarget = null, lowWarned = false, fullWarnT = 0;
-let paused = true, time = 0;
-const cam = { x: 0, y: 0 };
+const DEFAULT_OPTS = { sens: 1, invert: false, dist: 9, fov: 70, labels: 'near', minimap: true, fps: false, quality: 'medium', shadows: true };
+let opts = Object.assign({}, DEFAULT_OPTS);
+try { Object.assign(opts, JSON.parse(localStorage.getItem(OPT_KEY)) || {}); } catch (e) {}
+function writeOpts() { try { localStorage.setItem(OPT_KEY, JSON.stringify(opts)); } catch (e) {} }
+const LABEL_DIST = { near: 28, far: 75, always: Infinity, off: 0 };
 
+// ---------- three.js setup ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 900);
+const hud = document.getElementById('hud'), hx = hud.getContext('2d');
+let VW = 0, VH = 0, DPR = 1;
+
+function applyGraphics() {
+  const q = { low: 0.6, medium: 1, high: 2 }[opts.quality] || 1;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q));
+  renderer.setSize(VW, VH);
+  if (renderer.shadowMap.enabled !== opts.shadows) {
+    renderer.shadowMap.enabled = opts.shadows;
+    if (world) world.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  }
+  camera.fov = opts.fov;
+  camera.updateProjectionMatrix();
+}
 function resize() {
-  DPR = Math.min(2, window.devicePixelRatio || 1);
-  VW = innerWidth; VH = innerHeight;
-  cv.width = VW * DPR; cv.height = VH * DPR;
-  cv.style.width = VW + 'px'; cv.style.height = VH + 'px';
+  VW = innerWidth; VH = innerHeight; DPR = Math.min(2, window.devicePixelRatio || 1);
+  hud.width = VW * DPR; hud.height = VH * DPR;
+  hud.style.width = VW + 'px'; hud.style.height = VH + 'px';
+  camera.aspect = VW / VH;
+  applyGraphics();
 }
 addEventListener('resize', resize);
-resize();
 
-function biomeAt(x, y) {
-  const gx = clamp(Math.floor(x / CELL), 0, GRID - 1), gy = clamp(Math.floor(y / CELL), 0, GRID - 1);
-  return world.biome[gy * GRID + gx];
+// shared forms: every object is one simple shape
+const GEO = {
+  plant: new THREE.ConeGeometry(0.45, 1.6, 7).translate(0, 0.8, 0),
+  rock: new THREE.DodecahedronGeometry(0.6).scale(1, 0.7, 1).translate(0, 0.3, 0),
+  mineral: new THREE.OctahedronGeometry(0.5).scale(1, 1.8, 1),
+  fossil: new THREE.TorusGeometry(0.55, 0.17, 8, 18).rotateX(Math.PI / 2).translate(0, 0.08, 0),
+};
+const LABEL_Y = { plant: 2.1, rock: 1.3, mineral: 2.6, fossil: 0.9 };
+const matCache = {};
+function speciesMat(sp) {
+  if (matCache[sp.id]) return matCache[sp.id];
+  const c = new THREE.Color(sp.color);
+  const m = new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: sp.cat === 'mineral' ? 0.3 : 0.85, metalness: sp.cat === 'mineral' ? 0.2 : 0 });
+  if (sp.cat === 'mineral') { m.emissive = c.clone(); m.emissiveIntensity = 0.45; }
+  return (matCache[sp.id] = m);
+}
+
+// name labels (canvas-text sprites), cached per text+color
+const labelCache = {};
+function labelMat(text, color, big) {
+  const key = text + '|' + color + '|' + (big ? 1 : 0);
+  if (labelCache[key]) return labelCache[key];
+  const c = document.createElement('canvas'), x = c.getContext('2d');
+  const fs = 36;
+  x.font = `bold ${fs}px system-ui,sans-serif`;
+  const w = Math.ceil(x.measureText(text).width) + 28, h = fs + 18;
+  c.width = w; c.height = h;
+  x.font = `bold ${fs}px system-ui,sans-serif`;
+  x.fillStyle = 'rgba(8,10,24,.68)';
+  x.beginPath(); x.moveTo(12, 0); x.arcTo(w, 0, w, h, 12); x.arcTo(w, h, 0, h, 12); x.arcTo(0, h, 0, 0, 12); x.arcTo(0, 0, w, 0, 12); x.fill();
+  x.fillStyle = color; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, depthWrite: false, fog: false });
+  if (big) { mat.depthTest = false; mat.sizeAttenuation = false; }
+  return (labelCache[key] = { mat, aspect: w / h });
+}
+function makeLabel(text, color, height, big) {
+  const s = new THREE.Sprite();
+  setLabelText(s, text, color, height, big);
+  s.renderOrder = big ? 10 : 5;
+  return s;
+}
+function setLabelText(s, text, color, height, big) {
+  const L = labelMat(text, color, big);
+  s.material = L.mat;
+  s.scale.set(height * L.aspect, height, 1);
+}
+
+// ---------- planet generation ----------
+let world = null;
+function genPlanet(idx) {
+  const P = PLANETS[idx];
+  const elev = new Float32Array(N * N), biome = new Uint8Array(N * N);
+  const pos = new Float32Array(N * N * 3), col = new Float32Array(N * N * 3);
+  const mini = document.createElement('canvas');
+  mini.width = mini.height = N;
+  const mx = mini.getContext('2d'), img = mx.createImageData(N, N);
+  const flatY = (0.47 - 0.38) * 60;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const wx = j * CELL, wz = i * CELL, k = i * N + j;
+      let h = fbm(wx / 60.8, wz / 60.8, P.seed);
+      const d = Math.hypot(wx - LANDER.x, wz - LANDER.z);
+      if (d < 25.6) h = Math.max(h, 0.45); // dry landing zone
+      const b = h < 0.38 ? 0 : h < 0.52 ? 1 : h < 0.62 ? 2 : 3;
+      biome[k] = b;
+      let y = Math.max(-4, (h - 0.38) * 60) + Math.max(0, h - 0.6) * 90;
+      y += (vnoise(wx / 3, wz / 3, P.seed + 5) - 0.5) * 0.6;
+      y = y + (flatY - y) * (1 - smooth(12, 28, d)); // flat pad for the lander
+      elev[k] = y;
+      const [hh, s, l] = P.col[BIOMES[b]];
+      let L = l + (fbm(wx / 8, wz / 8, P.seed + 99) - 0.5) * 14;
+      if (b === 0) L -= (0.38 - h) * 50;
+      if (b === 3) L += (h - 0.62) * 40;
+      const [r, g, bl] = hsl2rgb(hh, s, L);
+      pos[k * 3] = wx; pos[k * 3 + 1] = y; pos[k * 3 + 2] = wz;
+      col[k * 3] = r; col[k * 3 + 1] = g; col[k * 3 + 2] = bl;
+      img.data[k * 4] = r * 255; img.data[k * 4 + 1] = g * 255; img.data[k * 4 + 2] = bl * 255; img.data[k * 4 + 3] = 255;
+    }
+  }
+  mx.putImageData(img, 0, 0);
+
+  const scene = new THREE.Scene();
+  const sky = new THREE.Color(P.sky);
+  scene.background = sky;
+  scene.fog = P.dark ? new THREE.Fog(sky, 6, 48) : new THREE.Fog(sky, 70, 260);
+
+  const geo = new THREE.BufferGeometry();
+  const index = [];
+  for (let i = 0; i < GRID; i++) for (let j = 0; j < GRID; j++) {
+    const a = i * N + j, b = a + 1, c = a + N, d = c + 1;
+    index.push(a, c, b, b, c, d);
+  }
+  geo.setIndex(index);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
+  terrain.receiveShadow = true;
+  scene.add(terrain);
+
+  const [wh, ws, wl] = P.col.liquid;
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD).rotateX(-Math.PI / 2).translate(WORLD / 2, WATER_Y, WORLD / 2),
+    new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(wh / 360, ws / 100, (wl + 8) / 100), transparent: true, opacity: 0.78, roughness: 0.15, metalness: 0.1 }));
+  scene.add(water);
+
+  // lights
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444455, P.dark ? 0.12 : 0.75);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffffff, P.dark ? 0.05 : 0.8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 200 });
+  sun.shadow.bias = -0.0008;
+  scene.add(sun, sun.target);
+  const lamp = new THREE.PointLight(0xfff2d0, P.dark ? 1.6 : 0, 34, 1.5);
+  scene.add(lamp);
+
+  const w = { idx, P, elev, biome, mini, scene, sun, lamp, water, items: [], pulses: [] };
+  world = w;
+
+  // lander
+  const ly = groundY(LANDER.x, LANDER.z);
+  const lander = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0xd7dce8, flatShading: true, roughness: 0.5, metalness: 0.3 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 3.4, 6), metal);
+  body.position.y = 3.2;
+  const win = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 8), new THREE.MeshStandardMaterial({ color: 0x3aa0ff, emissive: 0x1a60aa, emissiveIntensity: 0.6 }));
+  win.position.set(0, 3.4, 2.4);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff4040 }));
+  beacon.position.y = 5.3;
+  lander.add(body, win, beacon);
+  for (let i = 0; i < 4; i++) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3.2), metal);
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    leg.position.set(Math.cos(a) * 3, 1.2, Math.sin(a) * 3);
+    leg.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45);
+    lander.add(leg);
+  }
+  lander.traverse(o => { o.castShadow = true; });
+  lander.position.set(LANDER.x, ly, LANDER.z);
+  const pad = new THREE.Mesh(new THREE.RingGeometry(LANDER_R - 0.25, LANDER_R, 64).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0xa0dcff, transparent: true, opacity: 0.5 }));
+  pad.position.set(LANDER.x, ly + 0.08, LANDER.z);
+  const landerLabel = makeLabel('LANDER', '#ff9d9d', 0.045, true);
+  landerLabel.position.set(LANDER.x, ly + 7, LANDER.z);
+  const landerLight = new THREE.PointLight(0xff5050, P.dark ? 1.2 : 0.4, 24);
+  landerLight.position.set(LANDER.x, ly + 6, LANDER.z);
+  scene.add(lander, pad, landerLabel, landerLight);
+  w.beacon = beacon; w.landerLabel = landerLabel;
+
+  // samples (same RNG sequence as v0.1 so saved progress lines up)
+  const species = genSpecies(idx);
+  const rnd = mulberry32(P.seed * 13 + 5);
+  const collected = new Set(save.collected[idx] || []);
+  for (let k = 0; k < 1300; k++) {
+    const x = 6 + rnd() * (WORLD - 12), z = 6 + rnd() * (WORLD - 12);
+    const r = rnd(), sr = rnd(), rot = rnd() * Math.PI * 2;
+    if (Math.hypot(x - LANDER.x, z - LANDER.z) < 16) continue;
+    const b = biomeAt(x, z);
+    let cat = null;
+    if (b === 0) { if (r < 0.04) cat = 'plant'; }
+    else if (b === 1) { if (r < 0.18) cat = 'plant'; else if (r < 0.21) cat = 'fossil'; else if (r < 0.22) cat = 'rock'; }
+    else if (b === 2) { if (r < 0.13) cat = 'rock'; else if (r < 0.16) cat = 'fossil'; else if (r < 0.18) cat = 'mineral'; }
+    else { if (r < 0.16) cat = 'mineral'; else if (r < 0.2) cat = 'rock'; else if (r < 0.21) cat = 'fossil'; }
+    if (!cat || collected.has(k)) continue;
+    const sp = pickSpecies(sr, species[cat]);
+    const s = sp.size / 12;
+    const y = Math.max(groundY(x, z), cat === 'plant' ? WATER_Y : -99);
+    const mesh = new THREE.Mesh(GEO[cat], speciesMat(sp));
+    mesh.scale.setScalar(s);
+    mesh.position.set(x, y + (cat === 'mineral' ? 1.1 * s : 0), z);
+    mesh.rotation.y = rot;
+    mesh.castShadow = true;
+    const label = makeLabel(spName(sp), CATS[cat].tag, 0.55, false);
+    label.position.set(x, y + LABEL_Y[cat] * s + 0.3, z);
+    const it = { id: k, cat, sp, x, y, z, s, mesh, label, revealed: cat !== 'fossil', ping: 0, taken: false };
+    mesh.visible = it.revealed;
+    label.visible = false;
+    scene.add(mesh, label);
+    w.items.push(it);
+  }
+  return w;
+}
+
+function disposeWorld(w) {
+  w.scene.traverse(o => {
+    if (o.isMesh && !Object.values(GEO).includes(o.geometry)) o.geometry.dispose();
+    if (o.isMesh && o.material && !Object.values(matCache).includes(o.material)) o.material.dispose();
+  });
+}
+
+function groundY(x, z) {
+  const fx = clamp(x / CELL, 0, GRID - 0.001), fz = clamp(z / CELL, 0, GRID - 0.001);
+  const j = Math.floor(fx), i = Math.floor(fz), u = fx - j, v = fz - i, e = world.elev, k = i * N + j;
+  return (e[k] * (1 - u) + e[k + 1] * u) * (1 - v) + (e[k + N] * (1 - u) + e[k + N + 1] * u) * v;
+}
+function biomeAt(x, z) {
+  const j = clamp(Math.round(x / CELL), 0, GRID), i = clamp(Math.round(z / CELL), 0, GRID);
+  return world.biome[i * N + j];
 }
 const known = sp => !!save.codex[sp.id];
 const spName = sp => known(sp) ? sp.name : 'Unknown ' + CATS[sp.cat].one;
 
+// ---------- player ----------
+const player = { x: LANDER.x, y: 0, z: LANDER.z + 7, vx: 0, vz: 0, vy: 0, ang: 0, o2: 100, onGround: true, walk: 0 };
+const camState = { yaw: 0, pitch: 0.35 };
+const playerMesh = new THREE.Group();
+{
+  const suit = new THREE.MeshStandardMaterial({ color: 0xf2f4f8, flatShading: true, roughness: 0.6 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.45, 0.9, 4, 10), suit);
+  body.position.y = 0.95;
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x3ad0ff, emissive: 0x1a7fa0, emissiveIntensity: 0.5, roughness: 0.2 }));
+  visor.position.set(0, 1.45, 0.38);
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), new THREE.MeshStandardMaterial({ color: 0x9aa3b8, flatShading: true }));
+  pack.position.set(0, 1.05, -0.45);
+  playerMesh.add(body, visor, pack);
+  playerMesh.traverse(o => { o.castShadow = true; });
+}
+const playerLabel = makeLabel('Researcher', '#9fd8ff', 0.4, false);
+
+let bag = [], floaters = [];
+let scanT = 0, pickCd = 0, digT = 0, digTarget = null, lowWarned = false, fullWarnT = 0, time = 0;
+
 function land(idx) {
-  world = genPlanet(idx);
+  if (world) { world.scene.remove(playerMesh, playerLabel); disposeWorld(world); }
+  genPlanet(idx);
+  world.scene.add(playerMesh, playerLabel);
   save.current = idx;
   writeSave();
-  player.x = LANDER.x; player.y = LANDER.y + 70; player.vx = player.vy = 0; player.o2 = 100;
-  bag = []; pulses = []; floaters = []; particles = [];
+  resetPlayer();
+  bag = []; floaters = [];
   digT = 0; digTarget = null; lowWarned = false;
+  camState.yaw = 0; camState.pitch = 0.35;
+  applyGraphics();
   toast(`Landed on ${world.P.name}`);
+}
+function resetPlayer() {
+  player.x = LANDER.x; player.z = LANDER.z + 7;
+  player.y = groundY(player.x, player.z);
+  player.vx = player.vz = player.vy = 0; player.o2 = 100; player.ang = 0;
 }
 
 // ---------- UI: toasts ----------
@@ -313,13 +563,20 @@ function toast(text, cls = '') {
   setTimeout(() => { d.style.opacity = '0'; }, 3200);
   setTimeout(() => d.remove(), 3800);
 }
-function floater(x, y, text, color = '#fff') { floaters.push({ x, y, text, color, t: 0 }); }
+function floater(x, y, z, text, color = '#fff') { floaters.push({ x, y, z, text, color, t: 0 }); }
 
 // ---------- gameplay ----------
+function atLander() { return Math.hypot(player.x - LANDER.x, player.z - LANDER.z) < LANDER_R; }
+
 function doScan() {
-  if (paused || scanT > 0) return;
+  if (menu || scanT > 0) return;
   scanT = SCAN_CD;
-  pulses.push({ x: player.x, y: player.y, t: 0, found: 0 });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 72).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0xb48cff, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+  ring.position.set(player.x, player.y + 0.4, player.z);
+  ring.renderOrder = 8;
+  world.scene.add(ring);
+  world.pulses.push({ x: player.x, z: player.z, t: 0, found: 0, ring });
 }
 
 function deposit() {
@@ -334,21 +591,24 @@ function deposit() {
     if (first) news.push(sp);
     col.push(it.id);
     it.gone = true;
+    world.scene.remove(it.mesh, it.label);
   }
   world.items = world.items.filter(i => !i.gone);
+  // newly identified species get their real name on every label
+  for (const it of world.items) if (news.includes(it.sp)) setLabelText(it.label, it.sp.name, CATS[it.cat].tag, 0.55, false);
   save.rp += gained;
   toast(`Analyzed ${bag.length} sample${bag.length > 1 ? 's' : ''}: +${gained} RP`);
   for (const sp of news) toast(`NEW DISCOVERY: ${sp.name} (${CATS[sp.cat].one})`, 'new');
-  floater(LANDER.x, LANDER.y - 60, `+${gained} RP`, '#ffd166');
+  floater(LANDER.x, groundY(LANDER.x, LANDER.z) + 6, LANDER.z, `+${gained} RP`, '#ffd166');
   bag = [];
   writeSave();
 }
 
 function blackout() {
-  for (const it of bag) it.taken = false;
+  for (const it of bag) { it.taken = false; it.mesh.visible = true; }
   const lost = bag.length;
   bag = [];
-  player.x = LANDER.x; player.y = LANDER.y + 70; player.vx = player.vy = 0; player.o2 = 100;
+  resetPlayer();
   lowWarned = false;
   toast(`Oxygen depleted! Rescue drone brought you back.${lost ? ` ${lost} sample${lost > 1 ? 's' : ''} lost.` : ''}`, 'bad');
 }
@@ -359,111 +619,135 @@ function collect(it) {
     return;
   }
   it.taken = true;
+  it.mesh.visible = false;
+  it.label.visible = false;
   bag.push(it);
-  floater(it.x, it.y - 14, '+' + spName(it.sp), it.cat === 'fossil' ? '#ffd166' : '#bfe8ff');
-  for (let i = 0; i < 8; i++) particles.push({ x: it.x, y: it.y, vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120, t: 0, life: 0.5, c: it.sp.color });
+  floater(it.x, it.y + 1.5, it.z, '+' + spName(it.sp), it.cat === 'fossil' ? '#ffd166' : '#bfe8ff');
 }
 
 function nearestItem() {
   let best = null, bd = PICK_R;
   for (const it of world.items) {
-    if (it.taken || !it.revealed) continue;
-    const d = Math.hypot(it.x - player.x, it.y - player.y);
+    if (it.taken || !it.revealed || Math.abs(it.y - player.y) > 3) continue;
+    const d = Math.hypot(it.x - player.x, it.z - player.z);
     if (d < bd) { bd = d; best = it; }
   }
   return best;
 }
-
 function fossilSignal() {
   let bd = Infinity;
   for (const it of world.items) {
     if (it.cat !== 'fossil' || it.revealed || it.taken) continue;
-    const d = Math.hypot(it.x - player.x, it.y - player.y);
+    const d = Math.hypot(it.x - player.x, it.z - player.z);
     if (d < bd) bd = d;
   }
   return bd;
 }
 
-// ---------- input ----------
-const keys = new Set();
-const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, active: false };
-let touchAct = false;
+// ---------- menus ----------
+const menus = {
+  title: document.getElementById('title'), pause: document.getElementById('pause'), options: document.getElementById('options'),
+  codex: document.getElementById('codex'), map: document.getElementById('starmap'),
+};
+let menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause = 0;
 
-addEventListener('keydown', e => {
-  const k = e.key.toLowerCase();
-  if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
-  if (k === 'escape') { closeOverlays(); return; }
-  if (document.getElementById('title').classList.contains('show')) { if (k === 'enter') startGame(); return; }
-  if (!e.repeat) {
-    if (k === 'q') doScan();
-    if (k === 'c') toggleCodex();
-    if (k === 'm') toggleMap();
-  }
-  keys.add(k);
-});
-addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-addEventListener('blur', () => { keys.clear(); touchAct = false; joy.active = false; });
+function showMenu(name, back = null) {
+  for (const k in menus) menus[k].classList.toggle('show', k === name);
+  menu = name; menuBack = back;
+  keys.clear(); touchAct = false;
+  if (name === 'pause') renderPause();
+  if (name === 'options') renderOptions();
+  if (name === 'codex') renderCodex();
+  if (name === 'map') renderMap();
+  if (document.pointerLockElement) { suppressUnlockPause = true; document.exitPointerLock(); }
+}
+function resume() {
+  for (const k in menus) menus[k].classList.remove('show');
+  menu = null; menuBack = null;
+  lockPointer();
+}
+function goBack() {
+  if (menu === 'title') return;
+  if (menuBack) showMenu(menuBack); else resume();
+}
+function lockPointer() {
+  if (isTouch || menu) return;
+  try { const p = renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+}
 
-cv.addEventListener('touchstart', e => {
-  for (const t of e.changedTouches) {
-    if (joy.id === null) { joy.id = t.identifier; joy.ox = joy.x = t.clientX; joy.oy = joy.y = t.clientY; joy.active = true; }
-  }
-  e.preventDefault();
-}, { passive: false });
-cv.addEventListener('touchmove', e => {
-  for (const t of e.changedTouches) if (t.identifier === joy.id) { joy.x = t.clientX; joy.y = t.clientY; }
-  e.preventDefault();
-}, { passive: false });
-const endTouch = e => { for (const t of e.changedTouches) if (t.identifier === joy.id) { joy.id = null; joy.active = false; } };
-cv.addEventListener('touchend', endTouch);
-cv.addEventListener('touchcancel', endTouch);
-
-const tAct = document.getElementById('tAct');
-tAct.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
-['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAct.addEventListener(ev, () => { touchAct = false; }));
-document.getElementById('tScan').addEventListener('pointerdown', e => { doScan(); e.preventDefault(); });
-document.getElementById('tCodex').addEventListener('click', toggleCodex);
-document.getElementById('tMap').addEventListener('click', toggleMap);
-if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) document.getElementById('touch').classList.add('show');
-
-// ---------- overlays ----------
-const ovTitle = document.getElementById('title'), ovCodex = document.getElementById('codex'), ovMap = document.getElementById('starmap');
 document.getElementById('verTag').textContent = 'v' + VERSION;
-document.getElementById('startBtn').onclick = startGame;
-document.getElementById('resetBtn').onclick = () => {
-  if (confirm('Erase all research progress?')) { save = defaultSave(); writeSave(); toast('Progress reset.'); }
+document.getElementById('startBtn').onclick = () => {
+  if (!world || world.idx !== save.current) land(save.current);
+  resume();
+};
+document.getElementById('titleOptBtn').onclick = () => showMenu('options', 'title');
+document.getElementById('pResume').onclick = resume;
+document.getElementById('pCodex').onclick = () => showMenu('codex', 'pause');
+document.getElementById('pMap').onclick = () => showMenu('map', 'pause');
+document.getElementById('pOpt').onclick = () => showMenu('options', 'pause');
+document.getElementById('pQuit').onclick = () => { writeSave(); showMenu('title'); };
+for (const k of ['codex', 'map']) menus[k].addEventListener('click', e => { if (e.target === menus[k]) goBack(); });
+
+function renderPause() {
+  document.getElementById('pauseInfo').textContent = `${world.P.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX}`;
+  const pm = document.getElementById('pMap');
+  pm.disabled = !atLander();
+  pm.textContent = atLander() ? 'Star Map' : 'Star Map (go to lander)';
+}
+
+// options
+const $ = id => document.getElementById(id);
+function renderOptions() {
+  $('oSens').value = opts.sens; $('vSens').textContent = opts.sens.toFixed(1);
+  $('oInvert').checked = opts.invert;
+  $('oDist').value = opts.dist; $('vDist').textContent = opts.dist + 'm';
+  $('oFov').value = opts.fov; $('vFov').textContent = opts.fov + '°';
+  $('oLabels').value = opts.labels;
+  $('oMinimap').checked = opts.minimap;
+  $('oFps').checked = opts.fps;
+  $('oQuality').value = opts.quality;
+  $('oShadows').checked = opts.shadows;
+}
+function optChanged() {
+  opts.sens = +$('oSens').value;
+  opts.invert = $('oInvert').checked;
+  opts.dist = +$('oDist').value;
+  opts.fov = +$('oFov').value;
+  opts.labels = $('oLabels').value;
+  opts.minimap = $('oMinimap').checked;
+  opts.fps = $('oFps').checked;
+  opts.quality = $('oQuality').value;
+  opts.shadows = $('oShadows').checked;
+  writeOpts(); applyGraphics(); renderOptions();
+}
+for (const id of ['oSens', 'oInvert', 'oDist', 'oFov', 'oLabels', 'oMinimap', 'oFps', 'oQuality', 'oShadows']) $(id).addEventListener('input', optChanged);
+$('oBack').onclick = goBack;
+$('oDefaults').onclick = () => { opts = Object.assign({}, DEFAULT_OPTS); writeOpts(); applyGraphics(); renderOptions(); };
+$('oReset').onclick = () => {
+  if (!confirm('Erase all research progress?')) return;
+  save = defaultSave(); writeSave();
+  land(0);
+  toast('Progress reset.');
+  showMenu('title');
 };
 
-function startGame() {
-  ovTitle.classList.remove('show');
-  if (!world || world.idx !== save.current) land(save.current);
-  paused = false;
-}
-function closeOverlays() {
-  if (ovTitle.classList.contains('show')) return;
-  ovCodex.classList.remove('show');
-  ovMap.classList.remove('show');
-  paused = false;
-}
-[ovCodex, ovMap].forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOverlays(); }));
-
+// codex
 const iconCache = {};
 function iconFor(sp) {
   if (iconCache[sp.id]) return iconCache[sp.id];
   const c = document.createElement('canvas');
   c.width = c.height = 88;
   const x = c.getContext('2d');
-  x.scale(2, 2);
-  x.translate(22, 24);
-  x.scale(1.4, 1.4);
-  drawSpecies(x, sp, 0, 0);
+  x.translate(44, 46);
+  x.fillStyle = sp.color; x.strokeStyle = 'rgba(255,255,255,.5)'; x.lineWidth = 3;
+  x.beginPath();
+  if (sp.cat === 'plant') { x.moveTo(0, -30); x.lineTo(20, 26); x.lineTo(-20, 26); x.closePath(); x.fill(); x.stroke(); }
+  else if (sp.cat === 'rock') { for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; x.lineTo(Math.cos(a) * 26, Math.sin(a) * 19); } x.closePath(); x.fill(); x.stroke(); }
+  else if (sp.cat === 'mineral') { x.moveTo(0, -32); x.lineTo(18, 0); x.lineTo(0, 32); x.lineTo(-18, 0); x.closePath(); x.fill(); x.stroke(); }
+  else { x.strokeStyle = sp.color; x.lineWidth = 10; x.arc(0, 0, 20, 0, Math.PI * 2); x.stroke(); }
   return (iconCache[sp.id] = c.toDataURL());
 }
-
-function toggleCodex() {
-  if (ovTitle.classList.contains('show')) return;
-  if (ovCodex.classList.contains('show')) { closeOverlays(); return; }
-  ovMap.classList.remove('show');
+function renderCodex() {
   let h = `<h2>Research Codex</h2><p class="sub">Research Points: <b>${save.rp}</b> &nbsp;·&nbsp; Backpack: ${bag.length}/${BAG_MAX} (deposit at lander to analyze)</p>`;
   const order = [save.current, ...save.unlocked.filter(i => i !== save.current)];
   for (const idx of order) {
@@ -484,23 +768,11 @@ function toggleCodex() {
       h += '</div>';
     }
   }
-  h += `<div class="row"><button onclick="closeOverlays()">Close</button></div>`;
-  document.getElementById('codexBody').innerHTML = h;
-  ovCodex.classList.add('show');
-  paused = true;
+  h += `<div class="row"><button onclick="goBack()">Close</button></div>`;
+  $('codexBody').innerHTML = h;
 }
 
-function atLander() { return Math.hypot(player.x - LANDER.x, player.y - LANDER.y) < LANDER_R; }
-
-function toggleMap() {
-  if (ovTitle.classList.contains('show')) return;
-  if (ovMap.classList.contains('show')) { closeOverlays(); return; }
-  if (!atLander()) { toast('Return to the lander to use the star map.'); return; }
-  ovCodex.classList.remove('show');
-  renderMap();
-  ovMap.classList.add('show');
-  paused = true;
-}
+// star map
 function renderMap() {
   let h = `<h2>Star Map</h2><p class="sub">Research Points: <b>${save.rp}</b> — spend them to unlock new worlds.</p><div class="planets">`;
   PLANETS.forEach((P, i) => {
@@ -515,12 +787,12 @@ function renderMap() {
     else if (unlocked) btn = `<button onclick="travel(${i})">Travel</button>`;
     else btn = `<button ${save.rp >= P.cost ? '' : 'disabled'} onclick="unlock(${i})">Unlock · ${P.cost} RP</button>`;
     h += `<div class="pcard ${i === save.current ? 'cur' : ''}"><div class="orb" style="${orb}"></div>
-      <b>${unlocked ? P.name : '??? (' + P.name + ')'}</b>
+      <b>${P.name}</b>
       <p class="muted">${P.desc}</p>
       <p>O₂ use: ×${P.o2.toFixed(1)}${unlocked ? ` · Catalogued ${got}/${tot}` : ''}</p>${btn}</div>`;
   });
-  h += `</div><div class="row"><button class="ghost" onclick="closeOverlays()">Close</button></div>`;
-  document.getElementById('mapBody').innerHTML = h;
+  h += `</div><div class="row"><button class="ghost" onclick="goBack()">Close</button></div>`;
+  $('mapBody').innerHTML = h;
 }
 function unlock(i) {
   const P = PLANETS[i];
@@ -533,34 +805,137 @@ function unlock(i) {
 }
 function travel(i) {
   if (!save.unlocked.includes(i)) return;
-  closeOverlays();
   land(i);
+  resume();
 }
+
+// ---------- input ----------
+const keys = new Set();
+const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, active: false };
+const look = { id: null, x: 0, y: 0 };
+let touchAct = false, jumpQueued = false;
+
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+  if (k === 'escape' || k === 'p') {
+    if (menu === null) showMenu('pause');
+    else if (menu === 'pause' && performance.now() - lastAutoPause < 300) {} // pointer-lock exit already paused
+    else goBack();
+    return;
+  }
+  if (menu === 'title') { if (k === 'enter') $('startBtn').click(); return; }
+  if (menu) return;
+  if (!e.repeat) {
+    if (k === 'q') doScan();
+    if (k === 'c') showMenu('codex');
+    if (k === 'm') { if (atLander()) showMenu('map'); else toast('Return to the lander to use the star map.'); }
+    if (k === ' ') jumpQueued = true;
+  }
+  keys.add(k);
+});
+addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+addEventListener('blur', () => { keys.clear(); touchAct = false; joy.active = false; if (menu === null) showMenu('pause'); });
+
+document.addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement) {
+    if (menu === null && !suppressUnlockPause) { showMenu('pause'); lastAutoPause = performance.now(); }
+    suppressUnlockPause = false;
+  }
+});
+function rotateCam(dx, dy) {
+  const s = 0.0028 * opts.sens;
+  camState.yaw -= dx * s;
+  camState.pitch = clamp(camState.pitch + dy * s * (opts.invert ? -1 : 1), -0.25, 1.3);
+}
+let dragging = false;
+renderer.domElement.addEventListener('mousedown', () => {
+  if (menu) return;
+  if (!document.pointerLockElement) lockPointer();
+  dragging = true;
+});
+addEventListener('mouseup', () => { dragging = false; });
+addEventListener('mousemove', e => {
+  if (menu) return;
+  if (document.pointerLockElement || dragging) rotateCam(e.movementX, e.movementY);
+});
+
+const cvs = renderer.domElement;
+cvs.addEventListener('touchstart', e => {
+  for (const t of e.changedTouches) {
+    if (t.clientX < VW / 2 && joy.id === null) { joy.id = t.identifier; joy.ox = joy.x = t.clientX; joy.oy = joy.y = t.clientY; joy.active = true; }
+    else if (look.id === null) { look.id = t.identifier; look.x = t.clientX; look.y = t.clientY; }
+  }
+  e.preventDefault();
+}, { passive: false });
+cvs.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === joy.id) { joy.x = t.clientX; joy.y = t.clientY; }
+    if (t.identifier === look.id && !menu) { rotateCam((t.clientX - look.x) * 1.6, (t.clientY - look.y) * 1.6); look.x = t.clientX; look.y = t.clientY; }
+  }
+  e.preventDefault();
+}, { passive: false });
+const endTouch = e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === joy.id) { joy.id = null; joy.active = false; }
+    if (t.identifier === look.id) look.id = null;
+  }
+};
+cvs.addEventListener('touchend', endTouch);
+cvs.addEventListener('touchcancel', endTouch);
+
+const tAct = $('tAct');
+tAct.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAct.addEventListener(ev, () => { touchAct = false; }));
+$('tScan').addEventListener('pointerdown', e => { doScan(); e.preventDefault(); });
+$('tJump').addEventListener('pointerdown', e => { jumpQueued = true; e.preventDefault(); });
+$('tCodex').addEventListener('click', () => { if (!menu) showMenu('codex'); });
+$('tMap').addEventListener('click', () => { if (menu) return; if (atLander()) showMenu('map'); else toast('Return to the lander to use the star map.'); });
+$('tPause').addEventListener('click', () => { if (!menu) showMenu('pause'); });
+if (isTouch) $('touch').classList.add('show');
 
 // ---------- update ----------
 function update(dt) {
   time += dt;
   const P = world.P;
-  let mx = 0, my = 0;
-  if (keys.has('a') || keys.has('arrowleft')) mx -= 1;
-  if (keys.has('d') || keys.has('arrowright')) mx += 1;
-  if (keys.has('w') || keys.has('arrowup')) my -= 1;
-  if (keys.has('s') || keys.has('arrowdown')) my += 1;
+  let f = 0, r = 0;
+  if (keys.has('w') || keys.has('arrowup')) f += 1;
+  if (keys.has('s') || keys.has('arrowdown')) f -= 1;
+  if (keys.has('d') || keys.has('arrowright')) r += 1;
+  if (keys.has('a') || keys.has('arrowleft')) r -= 1;
   if (joy.active) {
     const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.hypot(dx, dy);
-    if (l > 8) { mx += dx / Math.max(l, 50); my += dy / Math.max(l, 50); }
+    if (l > 8) { r += dx / Math.max(l, 50); f -= dy / Math.max(l, 50); }
   }
-  const len = Math.hypot(mx, my);
-  if (len > 1) { mx /= len; my /= len; }
-  const b = biomeAt(player.x, player.y);
-  const spd = 170 * P.speed * (b === 0 ? 0.55 : 1);
-  const k = Math.min(1, P.grip * dt);
+  const sy = Math.sin(camState.yaw), cy = Math.cos(camState.yaw);
+  let mx = -sy * f + cy * r, mz = -cy * f - sy * r;
+  const len = Math.hypot(mx, mz);
+  if (len > 1) { mx /= len; mz /= len; }
+
+  const gy = groundY(player.x, player.z);
+  const inWater = gy < WATER_Y - 0.3;
+  const spd = 14 * P.speed * (inWater ? 0.55 : 1);
+  const k = Math.min(1, P.grip * dt * (player.onGround ? 1 : 0.3));
   player.vx += (mx * spd - player.vx) * k;
-  player.vy += (my * spd - player.vy) * k;
-  player.x = clamp(player.x + player.vx * dt, 20, WORLD - 20);
-  player.y = clamp(player.y + player.vy * dt, 20, WORLD - 20);
-  if (len > 0.1) player.ang = Math.atan2(my, mx);
-  player.walk += Math.hypot(player.vx, player.vy) * dt * 0.08;
+  player.vz += (mz * spd - player.vz) * k;
+  player.x = clamp(player.x + player.vx * dt, 2, WORLD - 2);
+  player.z = clamp(player.z + player.vz * dt, 2, WORLD - 2);
+  if (len > 0.1) {
+    const target = Math.atan2(mx, mz);
+    let d = target - player.ang;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    player.ang += d * Math.min(1, 12 * dt);
+  }
+
+  // vertical: gravity + jump, standing on terrain or wading in liquid
+  const floor = Math.max(groundY(player.x, player.z), WADE_Y);
+  if (jumpQueued && player.onGround) { player.vy = 9; player.onGround = false; }
+  jumpQueued = false;
+  player.vy -= P.grav * dt;
+  player.y += player.vy * dt;
+  if (player.y <= floor) { player.y = floor; player.vy = 0; player.onGround = true; }
+  else if (player.y > floor + 0.3) player.onGround = false;
+  player.walk += Math.hypot(player.vx, player.vz) * dt * 0.9;
 
   // oxygen & lander
   if (atLander()) {
@@ -568,7 +943,7 @@ function update(dt) {
     if (player.o2 > 30) lowWarned = false;
     if (bag.length) deposit();
   } else {
-    player.o2 -= P.o2 * (b === 0 ? 2.5 : 1) * dt;
+    player.o2 -= P.o2 * (inWater ? 2.5 : 1) * dt;
     if (player.o2 < 25 && !lowWarned) { lowWarned = true; toast('Oxygen low! Head back to the lander.', 'bad'); }
     if (player.o2 <= 0) blackout();
   }
@@ -576,13 +951,13 @@ function update(dt) {
   // collecting / digging
   scanT = Math.max(0, scanT - dt);
   pickCd -= dt; fullWarnT -= dt;
-  const act = keys.has('e') || keys.has(' ') || touchAct;
+  const act = keys.has('e') || touchAct;
   const near = nearestItem();
   if (near && act) {
     if (near.cat === 'fossil') {
       if (digTarget !== near) { digTarget = near; digT = 0; }
       digT += dt;
-      if (Math.random() < 0.5) particles.push({ x: near.x + (Math.random() - 0.5) * 16, y: near.y, vx: (Math.random() - 0.5) * 90, vy: -40 - Math.random() * 80, t: 0, life: 0.6, c: 'rgba(90,70,50,.9)' });
+      near.mesh.position.y = near.y + Math.sin(time * 40) * 0.05;
       if (digT >= DIG_TIME) { collect(near); digT = 0; digTarget = null; }
     } else if (pickCd <= 0) {
       collect(near);
@@ -591,15 +966,17 @@ function update(dt) {
   } else { digT = 0; digTarget = null; }
 
   // scanner pulses reveal as the ring passes
-  for (const p of pulses) {
+  for (const p of world.pulses) {
     p.t += dt;
-    const r = Math.min(1, p.t / SCAN_TIME) * SCAN_R;
+    const fr = Math.min(1, p.t / SCAN_TIME), rad = fr * SCAN_R;
+    p.ring.scale.setScalar(Math.max(0.01, rad));
+    p.ring.material.opacity = 0.9 * (1 - fr) + 0.1;
     for (const it of world.items) {
       if (it.taken || it.pinged === p) continue;
-      if (Math.hypot(it.x - p.x, it.y - p.y) < r) {
+      if (Math.hypot(it.x - p.x, it.z - p.z) < rad) {
         it.pinged = p;
-        it.ping = 3;
-        if (!it.revealed) { it.revealed = true; p.found++; floater(it.x, it.y - 16, 'Buried signal!', '#ffd166'); }
+        it.ping = 4;
+        if (!it.revealed) { it.revealed = true; it.mesh.visible = true; p.found++; floater(it.x, it.y + 1.5, it.z, 'Buried signal!', '#ffd166'); }
       }
     }
     if (p.t >= SCAN_TIME && !p.done) {
@@ -607,300 +984,165 @@ function update(dt) {
       if (p.found) toast(`Scan found ${p.found} buried trace${p.found > 1 ? 's' : ''} of ancient life!`, 'new');
     }
   }
-  pulses = pulses.filter(p => p.t < SCAN_TIME + 0.3);
+  world.pulses = world.pulses.filter(p => {
+    if (p.t < SCAN_TIME + 0.3) return true;
+    world.scene.remove(p.ring); p.ring.geometry.dispose(); p.ring.material.dispose();
+    return false;
+  });
+
   for (const it of world.items) if (it.ping > 0) it.ping -= dt;
-
-  for (const f of floaters) { f.t += dt; f.y -= 28 * dt; }
-  floaters = floaters.filter(f => f.t < 1.4);
-  for (const p of particles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt; }
-  particles = particles.filter(p => p.t < p.life);
-
-  cam.x = clamp(player.x - VW / 2, 0, Math.max(0, WORLD - VW));
-  cam.y = clamp(player.y - VH / 2, 0, Math.max(0, WORLD - VH));
+  for (const fl of floaters) { fl.t += dt; fl.y += 1.6 * dt; }
+  floaters = floaters.filter(fl => fl.t < 1.4);
 }
 
-// ---------- drawing ----------
-function drawSpecies(c, sp, t, rot) {
-  const s = sp.size;
-  c.save();
-  if (sp.cat === 'plant') {
-    c.rotate(Math.sin(t * 2 + sp.idx) * 0.08);
-    c.strokeStyle = 'hsl(110,45%,28%)'; c.lineWidth = 2.5;
-    c.beginPath(); c.moveTo(0, s * 0.8); c.lineTo(0, -s * 0.2); c.stroke();
-    c.fillStyle = 'hsl(110,45%,35%)';
-    c.beginPath(); c.ellipse(-s * 0.3, s * 0.35, s * 0.32, s * 0.13, -0.5, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(s * 0.3, s * 0.25, s * 0.32, s * 0.13, 0.5, 0, Math.PI * 2); c.fill();
-    c.fillStyle = sp.color;
-    for (let i = 0; i < sp.petals; i++) {
-      const a = (i / sp.petals) * Math.PI * 2;
-      c.beginPath(); c.arc(Math.cos(a) * s * 0.4, -s * 0.35 + Math.sin(a) * s * 0.4, s * 0.3, 0, Math.PI * 2); c.fill();
-    }
-    c.fillStyle = 'rgba(255,240,180,.95)';
-    c.beginPath(); c.arc(0, -s * 0.35, s * 0.22, 0, Math.PI * 2); c.fill();
-  } else if (sp.cat === 'rock') {
-    c.rotate(rot || 0);
-    c.fillStyle = sp.color; c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 2;
-    c.beginPath();
-    for (let i = 0; i < sp.sides; i++) {
-      const a = (i / sp.sides) * Math.PI * 2, r = s * sp.jitter[i];
-      i ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.8) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r * 0.8);
-    }
-    c.closePath(); c.fill(); c.stroke();
-    c.fillStyle = 'rgba(255,255,255,.18)';
-    c.beginPath(); c.ellipse(-s * 0.25, -s * 0.25, s * 0.3, s * 0.15, -0.4, 0, Math.PI * 2); c.fill();
-  } else if (sp.cat === 'mineral') {
-    c.fillStyle = sp.color.replace('hsl', 'hsla').replace(')', ',.22)');
-    c.beginPath(); c.arc(0, -s * 0.3, s * (1.1 + Math.sin(t * 3 + sp.idx) * 0.1), 0, Math.PI * 2); c.fill();
-    const n = sp.crystals;
-    for (let i = 0; i < n; i++) {
-      const a = n === 1 ? 0 : -0.55 + (i / (n - 1)) * 1.1;
-      const h = s * (1.4 - Math.abs(a) * 0.5), w = s * 0.32;
-      c.save(); c.rotate(a);
-      c.fillStyle = sp.color; c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 1.2;
-      c.beginPath(); c.moveTo(0, s * 0.3); c.lineTo(w, -h * 0.55); c.lineTo(0, -h); c.lineTo(-w, -h * 0.55); c.closePath();
-      c.fill(); c.stroke();
-      c.fillStyle = 'rgba(255,255,255,.35)';
-      c.beginPath(); c.moveTo(0, s * 0.3); c.lineTo(0, -h); c.lineTo(-w, -h * 0.55); c.closePath(); c.fill();
-      c.restore();
-    }
-  } else {
-    c.rotate(rot || 0);
-    c.fillStyle = 'rgba(60,40,25,.45)';
-    c.beginPath(); c.ellipse(0, 0, s * 1.2, s * 0.9, 0, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = sp.color; c.fillStyle = sp.color; c.lineWidth = 2.2; c.lineCap = 'round';
-    if (sp.ftype === 0) { // spiral shell
-      c.beginPath();
-      for (let a = 0; a < Math.PI * 5; a += 0.2) {
-        const r = s * 0.08 * a * 0.55;
-        a ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(0, 0);
-      }
-      c.stroke();
-    } else if (sp.ftype === 1) { // skeleton
-      c.beginPath(); c.moveTo(-s * 0.9, 0); c.lineTo(s * 0.7, 0); c.stroke();
-      for (let i = -3; i <= 2; i++) {
-        c.beginPath(); c.moveTo(i * s * 0.22, -s * 0.45); c.lineTo(i * s * 0.22, s * 0.45); c.stroke();
-      }
-      c.beginPath(); c.arc(s * 0.85, 0, s * 0.25, 0, Math.PI * 2); c.fill();
-    } else { // segmented crawler
-      c.beginPath(); c.ellipse(0, 0, s * 0.55, s * 0.85, 0, 0, Math.PI * 2); c.stroke();
-      for (let i = -2; i <= 2; i++) {
-        c.beginPath(); c.moveTo(-s * 0.5, i * s * 0.28); c.lineTo(s * 0.5, i * s * 0.28); c.stroke();
-      }
-      c.beginPath(); c.moveTo(0, -s * 0.85); c.lineTo(0, s * 0.85); c.stroke();
-    }
+// ---------- 3d scene sync ----------
+function syncScene() {
+  const bob = player.onGround ? Math.abs(Math.sin(player.walk)) * 0.08 : 0;
+  playerMesh.position.set(player.x, player.y + bob, player.z);
+  playerMesh.rotation.y = player.ang;
+  playerLabel.position.set(player.x, player.y + 2.3, player.z);
+  playerLabel.visible = opts.labels !== 'off';
+
+  // camera orbit
+  const d = opts.dist, tx = player.x, ty = player.y + 1.6, tz = player.z;
+  let cx = tx + Math.sin(camState.yaw) * Math.cos(camState.pitch) * d;
+  let cz = tz + Math.cos(camState.yaw) * Math.cos(camState.pitch) * d;
+  let cyy = ty + Math.sin(camState.pitch) * d;
+  cyy = Math.max(cyy, groundY(cx, cz) + 0.8, WATER_Y + 0.5);
+  camera.position.set(cx, cyy, cz);
+  camera.lookAt(tx, ty, tz);
+
+  world.sun.position.set(player.x + 30, player.y + 60, player.z + 20);
+  world.sun.target.position.set(player.x, player.y, player.z);
+  world.lamp.position.set(player.x, player.y + 3, player.z);
+  world.beacon.material.color.setHex(Math.sin(time * 4) > 0 ? 0xff4040 : 0x501010);
+  world.landerLabel.visible = opts.labels !== 'off';
+
+  const maxD = LABEL_DIST[opts.labels];
+  for (const it of world.items) {
+    if (it.taken) continue;
+    if (it.cat === 'mineral') it.mesh.rotation.y += 0.01;
+    if (!it.revealed || opts.labels === 'off') { it.label.visible = false; continue; }
+    const dist = Math.hypot(it.x - player.x, it.z - player.z);
+    it.label.visible = dist < maxD || (it.ping > 0 && dist < SCAN_R + 5);
   }
-  c.restore();
 }
 
-function drawLander() {
-  const { x, y } = LANDER;
-  ctx.save();
-  ctx.setLineDash([10, 8]);
-  ctx.strokeStyle = 'rgba(160,220,255,.45)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(x, y, LANDER_R, 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(0,0,0,.25)';
-  ctx.beginPath(); ctx.ellipse(x, y + 26, 46, 14, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#8b93a8'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(x - 22, y + 4); ctx.lineTo(x - 38, y + 26); ctx.moveTo(x + 22, y + 4); ctx.lineTo(x + 38, y + 26); ctx.stroke();
-  ctx.fillStyle = '#d7dce8'; ctx.strokeStyle = '#5a6278'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(x - 30, y + 10); ctx.lineTo(x + 30, y + 10); ctx.lineTo(x + 18, y - 34); ctx.lineTo(x - 18, y - 34); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#3aa0ff';
-  ctx.beginPath(); ctx.arc(x, y - 12, 9, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = Math.sin(time * 4) > 0 ? '#ff5d5d' : '#5a2020';
-  ctx.beginPath(); ctx.arc(x, y - 40, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-
-function drawPlayer() {
-  const { x, y, ang } = player;
-  const bob = Math.sin(player.walk) * 1.5;
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,.3)';
-  ctx.beginPath(); ctx.ellipse(x, y + 12, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.translate(x, y + bob);
-  ctx.rotate(ang);
-  ctx.fillStyle = '#9aa3b8';
-  ctx.fillRect(-16, -8, 8, 16);
-  ctx.fillStyle = '#f2f4f8'; ctx.strokeStyle = '#6a7390'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#3ad0ff';
-  ctx.beginPath(); ctx.ellipse(5, 0, 5, 7, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.7)';
-  ctx.beginPath(); ctx.arc(6.5, -2.5, 1.6, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-
+// ---------- HUD ----------
 function rr(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  hx.beginPath();
+  hx.moveTo(x + r, y); hx.arcTo(x + w, y, x + w, y + h, r); hx.arcTo(x + w, y + h, x, y + h, r);
+  hx.arcTo(x, y + h, x, y, r); hx.arcTo(x, y, x + w, y, r); hx.closePath();
 }
 function bar(x, y, w, h, frac, color, label) {
-  ctx.fillStyle = 'rgba(255,255,255,.1)'; rr(x, y, w, h, 4); ctx.fill();
-  ctx.fillStyle = color; rr(x, y, Math.max(0, w * frac), h, 4); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = '11px system-ui,sans-serif'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + 6, y + h / 2 + 0.5);
+  hx.fillStyle = 'rgba(255,255,255,.1)'; rr(x, y, w, h, 4); hx.fill();
+  hx.fillStyle = color; rr(x, y, Math.max(0, w * frac), h, 4); hx.fill();
+  hx.fillStyle = '#fff'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'middle';
+  hx.fillText(label, x + 6, y + h / 2 + 0.5);
 }
-
-function drawHUD(near) {
+const _v = new THREE.Vector3();
+function toScreen(x, y, z) {
+  _v.set(x, y, z).project(camera);
+  if (_v.z > 1) return null;
+  return [(_v.x + 1) / 2 * VW, (1 - _v.y) / 2 * VH];
+}
+let fps = 60;
+function drawHUD() {
+  hx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  hx.clearRect(0, 0, VW, VH);
+  if (!world || menu === 'title') return;
   const P = world.P;
-  ctx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 210, 112, 10); ctx.fill();
-  ctx.fillStyle = '#9fd8ff'; ctx.font = 'bold 16px system-ui,sans-serif'; ctx.textBaseline = 'top';
-  ctx.fillText(P.name, 20, 18);
-  ctx.fillStyle = '#ffd166'; ctx.font = '13px system-ui,sans-serif'; ctx.textAlign = 'right';
-  ctx.fillText(save.rp + ' RP', 210, 20); ctx.textAlign = 'left';
+  hx.textAlign = 'left';
+  hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 210, 112, 10); hx.fill();
+  hx.fillStyle = '#9fd8ff'; hx.font = 'bold 16px system-ui,sans-serif'; hx.textBaseline = 'top';
+  hx.fillText(P.name, 20, 18);
+  hx.fillStyle = '#ffd166'; hx.font = '13px system-ui,sans-serif'; hx.textAlign = 'right';
+  hx.fillText(save.rp + ' RP', 210, 20); hx.textAlign = 'left';
   const o2c = player.o2 < 25 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#3ad0ff';
   bar(20, 42, 190, 16, player.o2 / 100, o2c, `O₂ ${Math.ceil(player.o2)}%`);
   bar(20, 64, 190, 16, bag.length / BAG_MAX, bag.length >= BAG_MAX ? '#e0703a' : '#6bbf59', `Backpack ${bag.length}/${BAG_MAX}`);
   bar(20, 86, 190, 16, 1 - scanT / SCAN_CD, scanT > 0 ? '#555d88' : '#b48cff', scanT > 0 ? `Scanner ${scanT.toFixed(1)}s` : 'Scanner ready [Q]');
 
-  // fossil signal
   const sig = fossilSignal();
-  if (sig < 500) {
-    const bars = sig < 150 ? 3 : sig < 300 ? 2 : 1;
-    ctx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 128, 210, 26, 8); ctx.fill();
-    ctx.fillStyle = '#ffd166'; ctx.font = '12px system-ui,sans-serif'; ctx.textBaseline = 'middle';
-    ctx.fillText('Ancient life signal', 20, 141);
+  if (sig < 50) {
+    const bars = sig < 15 ? 3 : sig < 30 ? 2 : 1;
+    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 128, 210, 26, 8); hx.fill();
+    hx.fillStyle = '#ffd166'; hx.font = '12px system-ui,sans-serif'; hx.textBaseline = 'middle';
+    hx.fillText('Ancient life signal', 20, 141);
     for (let i = 0; i < 3; i++) {
-      ctx.fillStyle = i < bars ? '#ffd166' : 'rgba(255,255,255,.15)';
-      ctx.fillRect(160 + i * 14, 146 - (i + 1) * 4, 10, (i + 1) * 4);
+      hx.fillStyle = i < bars ? '#ffd166' : 'rgba(255,255,255,.15)';
+      hx.fillRect(160 + i * 14, 146 - (i + 1) * 4, 10, (i + 1) * 4);
     }
   }
 
-  // minimap
-  const ms = Math.min(150, VW * 0.3), mx = VW - ms - 10, my = 10;
-  ctx.fillStyle = 'rgba(10,13,30,.78)'; rr(mx - 4, my - 4, ms + 8, ms + 8, 8); ctx.fill();
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(world.tc, mx, my, ms, ms);
-  const sc = ms / WORLD;
-  for (const it of world.items) {
-    if (it.taken) continue;
-    if ((it.cat === 'fossil' && it.revealed) || it.ping > 0) {
-      ctx.fillStyle = it.cat === 'fossil' ? '#ffd166' : 'rgba(255,255,255,.8)';
-      ctx.fillRect(mx + it.x * sc - 1, my + it.y * sc - 1, 2.5, 2.5);
+  if (opts.minimap) {
+    const ms = Math.min(150, VW * 0.3), mx = VW - ms - 10, my = 10, sc = ms / WORLD;
+    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(mx - 4, my - 4, ms + 8, ms + 8, 8); hx.fill();
+    hx.imageSmoothingEnabled = true;
+    hx.drawImage(world.mini, mx, my, ms, ms);
+    for (const it of world.items) {
+      if (it.taken) continue;
+      if ((it.cat === 'fossil' && it.revealed) || it.ping > 0) {
+        hx.fillStyle = it.cat === 'fossil' ? '#ffd166' : 'rgba(255,255,255,.8)';
+        hx.fillRect(mx + it.x * sc - 1, my + it.z * sc - 1, 2.5, 2.5);
+      }
     }
+    hx.fillStyle = '#ff5d5d'; hx.fillRect(mx + LANDER.x * sc - 3, my + LANDER.z * sc - 3, 6, 6);
+    // player arrow + camera direction
+    const px = mx + player.x * sc, pz = my + player.z * sc;
+    hx.strokeStyle = 'rgba(255,255,255,.5)'; hx.lineWidth = 1;
+    hx.beginPath(); hx.moveTo(px, pz); hx.lineTo(px - Math.sin(camState.yaw) * 14, pz - Math.cos(camState.yaw) * 14); hx.stroke();
+    hx.save(); hx.translate(px, pz); hx.rotate(-player.ang + Math.PI);
+    hx.fillStyle = '#fff'; hx.beginPath(); hx.moveTo(0, -5); hx.lineTo(4, 4); hx.lineTo(-4, 4); hx.closePath(); hx.fill();
+    hx.restore();
   }
-  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1;
-  ctx.strokeRect(mx + cam.x * sc, my + cam.y * sc, VW * sc, VH * sc);
-  ctx.fillStyle = '#ff5d5d'; ctx.fillRect(mx + LANDER.x * sc - 3, my + LANDER.y * sc - 3, 6, 6);
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(mx + player.x * sc, my + player.y * sc, 3, 0, Math.PI * 2); ctx.fill();
+
+  // floaters
+  hx.font = 'bold 14px system-ui,sans-serif'; hx.textAlign = 'center'; hx.textBaseline = 'middle';
+  for (const fl of floaters) {
+    const p = toScreen(fl.x, fl.y, fl.z);
+    if (!p) continue;
+    hx.globalAlpha = 1 - fl.t / 1.4;
+    hx.fillStyle = 'rgba(0,0,0,.6)'; hx.fillText(fl.text, p[0] + 1, p[1] + 1);
+    hx.fillStyle = fl.color; hx.fillText(fl.text, p[0], p[1]);
+  }
+  hx.globalAlpha = 1;
 
   // prompt
+  const near = nearestItem();
   let prompt = '';
   if (atLander()) prompt = 'Lander: samples analyzed, O₂ refilling · [M] Star map';
-  else if (near) {
-    const nm = spName(near.sp);
-    prompt = near.cat === 'fossil' ? `Hold [E] to excavate ${nm}` : `[E] Collect ${nm}`;
-  }
+  else if (near) prompt = near.cat === 'fossil' ? `Hold [E] to excavate ${spName(near.sp)}` : `[E] Collect ${spName(near.sp)}`;
   if (prompt) {
-    ctx.font = '15px system-ui,sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-    const w = ctx.measureText(prompt).width + 28;
-    ctx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 70, w, 34, 10); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.fillText(prompt, VW / 2, VH - 53);
-    ctx.textAlign = 'left';
+    hx.font = '15px system-ui,sans-serif';
+    const w = hx.measureText(prompt).width + 28;
+    hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 70, w, 34, 10); hx.fill();
+    hx.fillStyle = '#fff'; hx.fillText(prompt, VW / 2, VH - 53);
   }
   if (digTarget) {
-    const sx = digTarget.x - cam.x, sy = digTarget.y - cam.y - 30;
-    ctx.fillStyle = 'rgba(0,0,0,.6)'; rr(sx - 26, sy, 52, 8, 4); ctx.fill();
-    ctx.fillStyle = '#ffd166'; rr(sx - 26, sy, 52 * Math.min(1, digT / DIG_TIME), 8, 4); ctx.fill();
+    const p = toScreen(digTarget.x, digTarget.y + 1.2, digTarget.z);
+    if (p) {
+      hx.fillStyle = 'rgba(0,0,0,.6)'; rr(p[0] - 30, p[1], 60, 9, 4); hx.fill();
+      hx.fillStyle = '#ffd166'; rr(p[0] - 30, p[1], 60 * Math.min(1, digT / DIG_TIME), 9, 4); hx.fill();
+    }
   }
+  hx.textAlign = 'left';
 
-  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = '11px system-ui,sans-serif'; ctx.textBaseline = 'bottom';
-  ctx.fillText('Planet Explorer v' + VERSION + ' · [C] Codex', 10, VH - 8);
+  hx.fillStyle = 'rgba(255,255,255,.45)'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'bottom';
+  hx.fillText(`Planet Explorer v${VERSION} · [Esc] Pause · [C] Codex` + (opts.fps ? ` · ${Math.round(fps)} FPS` : ''), 10, VH - 8);
+  if (!isTouch && !document.pointerLockElement && !menu) {
+    hx.textAlign = 'center'; hx.textBaseline = 'middle'; hx.font = '13px system-ui,sans-serif';
+    hx.fillStyle = 'rgba(255,255,255,.6)'; hx.fillText('Click to capture the mouse for camera control', VW / 2, VH - 100);
+    hx.textAlign = 'left';
+  }
 
   if (joy.active) {
-    ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 50, 0, Math.PI * 2); ctx.stroke();
+    hx.strokeStyle = 'rgba(255,255,255,.3)'; hx.lineWidth = 2;
+    hx.beginPath(); hx.arc(joy.ox, joy.oy, 50, 0, Math.PI * 2); hx.stroke();
     const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.min(50, Math.hypot(dx, dy)), a = Math.atan2(dy, dx);
-    ctx.fillStyle = 'rgba(255,255,255,.35)';
-    ctx.beginPath(); ctx.arc(joy.ox + Math.cos(a) * l, joy.oy + Math.sin(a) * l, 20, 0, Math.PI * 2); ctx.fill();
+    hx.fillStyle = 'rgba(255,255,255,.35)';
+    hx.beginPath(); hx.arc(joy.ox + Math.cos(a) * l, joy.oy + Math.sin(a) * l, 20, 0, Math.PI * 2); hx.fill();
   }
-}
-
-function render() {
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  if (!world) { ctx.fillStyle = '#05060d'; ctx.fillRect(0, 0, VW, VH); return; }
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(world.tc, cam.x / CELL, cam.y / CELL, VW / CELL, VH / CELL, 0, 0, VW, VH);
-
-  const x0 = cam.x - 40, y0 = cam.y - 40, x1 = cam.x + VW + 40, y1 = cam.y + VH + 40;
-  ctx.save();
-  ctx.translate(-cam.x, -cam.y);
-
-  for (const d of world.decor) {
-    if (d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;
-    if (d.crater) {
-      ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 2.2, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,.08)';
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 2.2, Math.PI * 1.1, Math.PI * 1.7); ctx.stroke();
-    } else {
-      ctx.fillStyle = 'rgba(0,0,0,.14)';
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.5, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  drawLander();
-
-  for (const it of world.items) {
-    if (it.taken || !it.revealed) continue;
-    if (it.x < x0 || it.x > x1 || it.y < y0 || it.y > y1) continue;
-    ctx.save(); ctx.translate(it.x, it.y);
-    drawSpecies(ctx, it.sp, time, it.rot);
-    ctx.restore();
-  }
-
-  for (const p of particles) {
-    ctx.globalAlpha = 1 - p.t / p.life;
-    ctx.fillStyle = p.c;
-    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
-  }
-  ctx.globalAlpha = 1;
-
-  drawPlayer();
-  ctx.restore();
-
-  // darkness on night worlds
-  if (world.P.dark) {
-    const px = player.x - cam.x, py = player.y - cam.y;
-    const g = ctx.createRadialGradient(px, py, 90, px, py, 330);
-    g.addColorStop(0, 'rgba(0,0,8,0)');
-    g.addColorStop(1, 'rgba(0,0,8,.93)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
-    const lx = LANDER.x - cam.x, ly = LANDER.y - cam.y - 40;
-    if (Math.sin(time * 4) > 0) {
-      ctx.fillStyle = '#ff5d5d';
-      ctx.beginPath(); ctx.arc(lx, ly, 5, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  // scanner pulses + pings (drawn above darkness)
-  ctx.save();
-  ctx.translate(-cam.x, -cam.y);
-  for (const p of pulses) {
-    const f = Math.min(1, p.t / SCAN_TIME);
-    ctx.strokeStyle = `rgba(180,140,255,${0.8 * (1 - f) + 0.1})`; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(p.x, p.y, f * SCAN_R, 0, Math.PI * 2); ctx.stroke();
-  }
-  for (const it of world.items) {
-    if (it.ping <= 0 || it.taken) continue;
-    if (it.x < x0 || it.x > x1 || it.y < y0 || it.y > y1) continue;
-    const a = Math.min(1, it.ping / 1.5);
-    ctx.strokeStyle = it.cat === 'fossil' ? `rgba(255,209,102,${a})` : `rgba(200,220,255,${a * 0.7})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(it.x, it.y, 18 + Math.sin(time * 6) * 3, 0, Math.PI * 2); ctx.stroke();
-  }
-  ctx.font = 'bold 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (const f of floaters) {
-    ctx.globalAlpha = 1 - f.t / 1.4;
-    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillText(f.text, f.x + 1, f.y + 1);
-    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
-  }
-  ctx.globalAlpha = 1; ctx.textAlign = 'left';
-  ctx.restore();
-
-  drawHUD(nearestItem());
 }
 
 // ---------- main loop ----------
@@ -908,12 +1150,18 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (world && !paused) update(dt);
-  render();
+  fps += ((1 / Math.max(dt, 0.001)) - fps) * 0.05;
+  if (world) {
+    if (!menu) update(dt);
+    syncScene();
+    renderer.render(world.scene, camera);
+  }
+  drawHUD();
   requestAnimationFrame(frame);
 }
+resize();
 land(save.current);
-paused = true;
+toastBox.innerHTML = '';
 requestAnimationFrame(frame);
 </script>
 </body>

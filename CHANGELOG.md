@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2 (prompt 2)
+- Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
+- Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher
+- Unknown samples are labelled "Unknown Plant/Rock/…" until analyzed, then show their real name
+- **Pause menu** (`Esc`/`P`): resume, codex, star map, options, save & quit to title
+- **Options menu**: mouse sensitivity, invert Y, camera distance, field of view, label mode (nearby / far / always / off), minimap, FPS counter, render quality, shadows (saved in the browser)
+- Jumping (`Space`); collecting moved to `E`
+- Umbros is now pitch-dark with a lamp around the player; a lander beacon label is always visible so you can find your way back
+- Touch: left side moves, right side looks around, new Jump and Pause buttons
+- Existing v0.1 progress carries over
+
 ## v0.1 (prompt 1)
 - First playable version: top-down planet exploration with basic shapes
 - Collectibles: plants, rocks, minerals, and hidden fossils (ancient life)
