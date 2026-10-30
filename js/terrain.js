@@ -68,7 +68,10 @@ function buildChunk(w, node) {
     if (body.type === 'planet') { cl = planetGroundColor(body, dv, h, sl); lw = planetLayers(body, h, sl, _gf); }
     else { const b = biomeOf(body, h, dv); cl = colorOf(body, b, h, dv, sl); lw = moonLayers(body, dv, b, h, sl); }
     for (let q = 0; q < 9; q++) W[q / 3 | 0][v * 3 + q % 3] = lw[q];
-    col[v * 3] = cl[0]; col[v * 3 + 1] = cl[1]; col[v * 3 + 2] = cl[2];
+    // ambient occlusion: hollows and valley floors (lower than their surroundings) get less sky light
+    const curv = ((H[k + 1] + H[k - 1] + H[k + B] + H[k - B]) / 4 - h) / (node.arc / N);
+    const ao = 1 - clamp(curv * 1.6, 0, 0.32);
+    col[v * 3] = cl[0] * ao; col[v * 3 + 1] = cl[1] * ao; col[v * 3 + 2] = cl[2] * ao;
   }
   // skirts hide cracks where a detailed chunk meets a coarser neighbour
   const skirt = Math.max(1.5, node.arc / N * 0.6);

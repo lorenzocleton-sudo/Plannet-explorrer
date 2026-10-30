@@ -334,12 +334,6 @@ const STARS = (() => {
   return pts;
 })();
 
-function skyBall(color, radius, dir, dist) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 20), new THREE.MeshStandardMaterial({ color, roughness: 1 }));
-  m.material.fog = false;
-  m.position.copy(dir).normalize().multiplyScalar(dist);
-  return m;
-}
 const bodyColor = (b, biome) => { const [h, s, l] = b.col[biome]; return new THREE.Color().setHSL(h / 360, s / 100, l / 100); };
 
 // ---------- build a world ----------
@@ -365,12 +359,14 @@ function genBody(body) {
   initTerrain(w);
 
   // lights
-  w.ambient = new THREE.AmbientLight(0xffffff, body.dark ? 0.08 : 0.35);
+  // sky light from above, light bounced off the ground from below (updated with the time of day)
+  w.ambient = new THREE.HemisphereLight(0xffffff, 0x404040, body.dark ? 0.08 : 0.35);
   w.sun = new THREE.DirectionalLight(0xfff6e8, body.dark ? 0.08 : 0.95);
   w.sun.castShadow = true;
   w.sun.shadow.mapSize.set(detail().shadow, detail().shadow);
-  Object.assign(w.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 220 });
-  w.sun.shadow.bias = -0.0008;
+  Object.assign(w.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 420 });
+  w.sun.shadow.bias = -0.0006;
+  w.sun.shadow.normalBias = 0.04;
   // small fill light around you plus a helmet spotlight, both for the night
   w.lamp = new THREE.PointLight(0xfff2d0, 0, 12, 1.5);
   w.helmet = new THREE.SpotLight(0xfff4dd, 0, 70, 0.62, 0.45, 1.2);
@@ -378,17 +374,12 @@ function genBody(body) {
 
   // the sky turns around the planet's axis: sun, stars, moons / parent planet all move together
   w.sky = new THREE.Group();
-  const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(2600, 24, 16), new THREE.MeshBasicMaterial({ color: 0xfff1b0, fog: false }));
+  const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(1600, 24, 16), new THREE.MeshBasicMaterial({ color: 0xfff6d8, fog: false }));
   sunDisc.position.copy(SUN_DIR).multiplyScalar(90000);
-  w.sky.add(sunDisc);
-  const srnd = mulberry32(body.seed + 404), sd = new THREE.Vector3();
-  if (body.type === 'planet') {
-    for (const M of body.moons) { const dist = 60000 + srnd() * 25000; w.sky.add(skyBall(bodyColor(M, 'dust'), dist * (0.02 + M.R / 120000), randDir(srnd, sd), dist)); }
-  } else {
-    const P = body.parent;
-    w.sky.add(skyBall(bodyColor(P, 'plains'), 70000 * 0.11, sd.set(0.35, 0.8, -0.45), 70000));
-    for (const M of P.moons) if (M !== body) w.sky.add(skyBall(bodyColor(M, 'dust'), 80000 * 0.012, randDir(srnd, sd), 80000));
-  }
+  w.sunGlow = makeSunGlow(!!body.atmo);
+  w.sunGlow.position.copy(sunDisc.position);
+  w.sky.add(sunDisc, w.sunGlow);
+  makeSkyBodies(w);
   scene.add(w.sky);
   initDayCycle(w);
 
@@ -409,6 +400,7 @@ function genBody(body) {
   spawnSpots(w);
   loadBase(w);
   initScenery(w);
+  w.groundTint = new THREE.Color().fromArray(colorAtDir(w.L));
   return w;
 }
 

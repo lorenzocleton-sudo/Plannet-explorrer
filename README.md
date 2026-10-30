@@ -40,7 +40,9 @@ Or open `index.html` in a browser. There's no install or build step, and it work
 5. **Research.** Collect samples and analyze them at the lander for Research Points, then unlock machines and upgrades in the **tech tree** (bigger oxygen tank, heat/cold suits, faster drills, better helmet light, bigger backpack, long-range scanner). Upgrades are crafted at a Fabricator.
 6. **Travel.** Flying to another planet or moon burns Rocket Fuel from the lander's hold, so set up a refinery before you leave. Each world keeps its own base, and machines catch up on the time you were away.
 
-The **Options** menu has mouse/camera/label/graphics settings and an **Admin** section with a debug mode (fly with `V`, infinite oxygen, god mode, fast machines, free travel, teleport with `T`, unlock all planets). Admin buttons only appear while debug mode is on.
+The **Options** menu has mouse, camera and label settings, **Detail** (Low / Medium / High: Low is for older tablets) and a debug mode. With debug mode on, the pause menu gets an **Admin** tab: fly mode (`V`; on touch JUMP goes up and INTERACT goes down), teleport to the lander (`T`), infinite oxygen, god mode, fast machines and free travel, and unlock all planets. No admin buttons are ever on the play screen.
+
+Every world has its own look: several biomes per planet, textured ground, trees, plants and rocks that fit the biome, water that is clear in the shallows, sky colours from the air's chemistry (shown when you land) and moons that orbit and show phases. Asset sources and licences are in [CREDITS.md](CREDITS.md).
 
 Progress is saved automatically in your browser.
 

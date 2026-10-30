@@ -16,15 +16,15 @@ const PLANET_CATS = ['plant', 'rock', 'mineral', 'fossil'];
 // "breathable" is hidden from the player until they land there.
 const PLANETS = [
   { name: 'Verdara', seed: 1101, temp: { base: 18, swing: 10 }, cost: 0, dayLen: 600, tilt: 0.35, R: 6000, g: 9.81, breathable: true, o2: 1.0, speed: 1.0, grip: 10,
-    atmo: { color: '#5d9cff', sunset: '#ff8a4a', clouds: 0.45, cloudColor: '#ffffff', wind: 0.0005 }, seaBias: 0.25, land: 45, mount: 520, desc: 'Mild, lush starter world.',
+    atmo: { kind: 'Nitrogen–oxygen', comp: 'N₂ 78% · O₂ 21% · Ar 0.9% · CO₂ 0.04%', color: '#5d9cff', sunset: '#ff8a4a', glow: '#ffc58a', haze: '#d4e4ff', fog: [900, 15000], clouds: 0.45, cloudColor: '#ffffff', wind: 0.0005 }, seaBias: 0.25, land: 45, mount: 520, desc: 'Mild, lush starter world.',
     col: { liquid: [200, 55, 34], plains: [105, 38, 36], rocky: [32, 18, 38], crystal: [265, 30, 52], beach: [45, 40, 62], snow: [210, 25, 93] },
     moons: [{ name: 'Pell', R: 1700, ice: false }] },
   { name: 'Ruska', seed: 2207, temp: { base: 40, swing: 38 }, cost: 40, dayLen: 780, tilt: 0.2, R: 5200, g: 11.2, breathable: false, o2: 1.4, speed: 0.95, grip: 10,
-    atmo: { color: '#d88a5c', sunset: '#ff5f30', clouds: 0.25, cloudColor: '#f2cdb0', wind: 0.0008 }, seaBias: 0.3, land: 45, mount: 650, desc: 'Rust-red dunes and towering iron cliffs.',
+    atmo: { kind: 'Dusty carbon dioxide (Mars-like: butterscotch days, blue sunsets)', comp: 'CO₂ 95% · N₂ 2.8% · Ar 2% · fine iron dust', color: '#c99862', sunset: '#6e4a33', glow: '#86b4ee', haze: '#e6c49a', fog: [450, 9000], clouds: 0.25, cloudColor: '#efd3b5', wind: 0.0008 }, seaBias: 0.3, land: 45, mount: 650, desc: 'Rust-red dunes and towering iron cliffs.',
     col: { liquid: [12, 70, 28], plains: [20, 45, 40], rocky: [10, 28, 30], crystal: [40, 65, 52], beach: [28, 45, 52] },
     moons: [{ name: 'Kor', R: 1200, ice: false }, { name: 'Vesk', R: 2000, ice: true }] },
   { name: 'Glacia', seed: 3301, temp: { base: -42, swing: 14 }, cost: 100, dayLen: 480, tilt: 0.45, R: 5600, g: 8.4, breathable: true, o2: 1.7, speed: 1.1, grip: 2.2,
-    atmo: { color: '#8fc6ff', sunset: '#ffb27a', clouds: 0.7, cloudColor: '#ffffff', wind: 0.0004 }, seaBias: -0.1, land: 40, mount: 420, desc: 'Frozen ocean world. The ice is slippery!',
+    atmo: { kind: 'Nitrogen–methane (methane turns the sky teal)', comp: 'N₂ 72% · O₂ 20% · CH₄ 6% · Ar 2%', color: '#4fbab6', sunset: '#e0c46a', glow: '#f4f2b8', haze: '#c4eeea', fog: [700, 12000], clouds: 0.7, cloudColor: '#f2fbfa', wind: 0.0004 }, seaBias: -0.1, land: 40, mount: 420, desc: 'Frozen ocean world. The ice is slippery!',
     col: { liquid: [198, 60, 38], plains: [200, 28, 80], rocky: [212, 14, 55], crystal: [180, 60, 70], beach: [200, 20, 86], snow: [200, 30, 96] },
     moons: [] },
   { name: 'Umbros', seed: 4409, temp: { base: -75, swing: 5 }, cost: 200, dayLen: 900, tilt: 0.1, R: 7000, g: 9.4, breathable: false, o2: 2.0, speed: 1.0, grip: 10, dark: true,
@@ -33,7 +33,7 @@ const PLANETS = [
     moons: [{ name: 'Nyx', R: 1100, ice: true }, { name: 'Erebus', R: 1600, ice: false },
             { name: 'Mora', R: 1400, ice: true }, { name: 'Thane', R: 2300, ice: false }] },
   { name: 'Xeno Prime', seed: 5503, temp: { base: 52, swing: 16 }, cost: 350, dayLen: 720, tilt: 0.3, R: 8000, g: 14.6, breathable: false, o2: 2.4, speed: 0.9, grip: 8,
-    atmo: { color: '#a8c45a', sunset: '#ffb84a', clouds: 0.5, cloudColor: '#eef3c0', wind: 0.0006 }, seaBias: 0.05, land: 50, mount: 800, desc: 'Heavy, toxic jungle world. Rich in ancient life.',
+    atmo: { kind: 'Sulfur haze (thick, yellow-orange)', comp: 'N₂ 60% · CO₂ 24% · SO₂ 11% · H₂S 5%', color: '#d4a752', sunset: '#ff6420', glow: '#ffd27a', haze: '#f0d79c', fog: [220, 5200], clouds: 0.5, cloudColor: '#f3e2b0', wind: 0.0006 }, seaBias: 0.05, land: 50, mount: 800, desc: 'Heavy, toxic jungle world. Rich in ancient life.',
     col: { liquid: [80, 80, 32], plains: [62, 40, 34], rocky: [40, 20, 30], crystal: [150, 70, 52], beach: [55, 35, 45] },
     moons: [{ name: 'Ixa', R: 2100, ice: true }, { name: 'Quell', R: 1300, ice: false }, { name: 'Zor', R: 1500, ice: false }] },
 ];

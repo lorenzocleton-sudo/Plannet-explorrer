@@ -15,8 +15,8 @@ void main() {
 const ATMO_FRAG = `
 #include <common>
 #include <logdepthbuf_pars_fragment>
-uniform vec3 uSun, uColor, uSunset, uCenter;
-uniform float uR, uRa, uDensity;
+uniform vec3 uSun, uColor, uSunset, uGlow, uHaze, uCenter;
+uniform float uR, uRa, uDensity, uRays, uTime;
 varying vec3 vPos;
 void main() {
   #include <logdepthbuf_fragment>
@@ -39,9 +39,23 @@ void main() {
   float dens = 1.0 - exp(-len / (uRa - uR) * uDensity);
   float graze = exp(-pow(sunAmt * 3.5, 2.0));
   float mu = max(dot(dir, uSun), 0.0);
+  // sky colour from the air's chemistry: day colour, sunset colour, a halo around the sun
+  // (blue on a dusty CO2 world, warm on an Earth-like one) and paler haze towards the horizon
   vec3 col = mix(uColor, uSunset, graze * 0.85);
-  col += uSunset * pow(mu, 6.0) * 0.6 * graze;
+  vec3 upv = normalize(cameraPosition - uCenter);
+  float horiz = 1.0 - abs(dot(dir, upv));
+  col = mix(col, uHaze * mix(1.0, 0.75, graze), pow(horiz, 5.0) * 0.55 * (1.0 - graze * 0.5));
+  col += uGlow * (pow(mu, 4.0) * (0.2 + 0.9 * graze) + pow(mu, 40.0) * (0.45 + 0.9 * graze));
   col += vec3(1.0, 0.95, 0.85) * pow(mu, 300.0) * 1.5;
+  // light shafts fanning out from a low sun through gaps in the clouds
+  if (uRays > 0.0) {
+    vec3 a1 = normalize(cross(uSun, abs(uSun.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+    vec3 a2 = cross(uSun, a1);
+    float ang = atan(dot(dir, a2), dot(dir, a1));
+    float sh = (sin(ang * 11.0 + uTime * 0.04) * 0.5 + 0.5) * (sin(ang * 27.0 - uTime * 0.03 + 1.7) * 0.5 + 0.5) + (sin(ang * 5.0 + 2.1) * 0.5 + 0.5) * 0.35;
+    float ray = smoothstep(0.3, 0.75, sh) * pow(mu, 2.5) * smoothstep(0.995, 0.97, mu) * (0.25 + graze * 1.2);
+    col += uGlow * ray * uRays * 0.55;
+  }
   gl_FragColor = vec4(col * light, clamp(dens * (0.12 + 0.88 * light), 0.0, 1.0));
 }`;
 
@@ -50,7 +64,9 @@ function makeAtmosphere(R, Ra, atmo, center = new THREE.Vector3()) {
     vertexShader: ATMO_VERT, fragmentShader: ATMO_FRAG,
     uniforms: {
       uSun: { value: SUN_DIR.clone() }, uColor: { value: new THREE.Color(atmo.color) }, uSunset: { value: new THREE.Color(atmo.sunset) },
+      uGlow: { value: new THREE.Color(atmo.glow || atmo.sunset) }, uHaze: { value: new THREE.Color(atmo.haze || atmo.color) },
       uCenter: { value: center }, uR: { value: R }, uRa: { value: Ra }, uDensity: { value: 3.2 },
+      uRays: { value: atmo.clouds || 0 }, uTime: { value: 0 },
     },
     side: THREE.BackSide, transparent: true, depthWrite: false,
   });
@@ -151,13 +167,29 @@ function localTime(w, up) {
   return ((12 - a / (Math.PI * 2) * 24) % 24 + 24) % 24;
 }
 // lights for the current sun position, as seen from `up`
-const _sunCol = new THREE.Color(), _warm = new THREE.Color('#ffb070');
+const _sunCol = new THREE.Color(), _warm = new THREE.Color('#ffb070'), _glowC = new THREE.Color();
 function updateLights(w, up, head, aim) {
   const B = w.body, sunAmt = up.dot(w.sunDir);
   const day = smooth(-0.1, 0.18, sunAmt), dim = B.dark ? 0.15 : 1;
   w.sun.intensity = 0.95 * dim * smooth(-0.06, 0.12, sunAmt);
   w.sun.color.copy(_sunCol.set(0xfff6e8)).lerp(_warm, B.atmo ? Math.exp(-Math.pow(sunAmt * 5, 2)) * 0.7 : 0);
-  w.ambient.intensity = lerp(0.045, B.atmo ? 0.35 : 0.2, day * dim);
+  // hemisphere light: sky colour from above, darker ground bounce from below
+  w.ambient.intensity = lerp(0.06, B.atmo ? 0.55 : 0.28, day * dim);
+  w.ambient.position.copy(up);
+  if (B.atmo) w.ambient.color.set(B.atmo.color).lerp(_sunCol.set(0xffffff), 0.45);
+  else w.ambient.color.set(0xd8dce8);
+  w.ambient.groundColor.copy(w.groundTint || _sunCol.set(0x50483c)).multiplyScalar(0.55);
+  // sun glow: bigger and warmer when the sun is low
+  if (w.sunGlow) {
+    const low = Math.exp(-Math.pow(sunAmt * 4, 2));
+    w.sunGlow.material.color.set(0xfff2d8).lerp(_glowC.set(B.atmo ? (B.atmo.glow || B.atmo.sunset) : 0xfff2d8), low * 0.8);
+    w.sunGlow.scale.setScalar((B.atmo ? 26000 : 11000) * (1 + low * 0.7));
+    w.sunGlow.material.opacity = B.dark ? 0.15 : 0.9;
+  }
+  if (w.atmo) {
+    w.atmo.material.uniforms.uTime.value = performance.now() / 1000 % 10000;
+    w.atmo.material.uniforms.uRays.value = B.atmo.clouds * detail().rays;
+  }
   const night = 1 - day * dim;
   w.lamp.intensity = night * 0.5;
   const better = save.upgrades.helmet;
@@ -183,11 +215,31 @@ function updateSky(w, up, sunDir, camR = camera.position.length()) {
     w.atmo.material.uniforms.uSun.value.copy(sunDir);
     w.clouds.material.uniforms.uSun.value.copy(sunDir);
     const light = smooth(-0.3, 0.25, sunAmt), graze = Math.exp(-Math.pow(sunAmt * 3.5, 2));
-    _skyA.set(B.atmo.color).lerp(_skyB.set(B.atmo.sunset), graze * 0.85).multiplyScalar(light);
+    // fog = the sky near the horizon: the day colour washed towards the haze, warmer at sunset
+    _skyA.set(B.atmo.color).lerp(_skyB.set(B.atmo.haze || B.atmo.color), 0.45).lerp(_skyB.set(B.atmo.sunset), graze * 0.7).multiplyScalar(light);
     w.scene.fog.color.copy(_skyA);
-    w.scene.fog.near = 700 + alt * 3;
-    w.scene.fog.far = 11000 + alt * 10 + (1 - inAir) * 1e6;
+    const fk = detail().fogK, [fn, ff] = B.atmo.fog || [700, 11000];
+    w.scene.fog.near = fn * fk + alt * 3;
+    w.scene.fog.far = ff * fk + alt * 10 + (1 - inAir) * 1e6;
     STARS.material.opacity = 1 - smooth(-0.2, 0.15, sunAmt) * inAir;
   } else STARS.material.opacity = 1;
+  if (typeof updateSkyBodies === 'function') updateSkyBodies(w, STARS.material.opacity);
   return sunAmt;
+}
+
+// a soft additive glow around the sun disc (wide in an atmosphere, tight in vacuum)
+let sunGlowTex = null;
+function makeSunGlow(air) {
+  if (!sunGlowTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.08, 'rgba(255,250,235,0.9)'); g.addColorStop(0.25, 'rgba(255,235,200,0.35)');
+    g.addColorStop(0.55, 'rgba(255,220,170,0.08)'); g.addColorStop(1, 'rgba(255,210,160,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+    sunGlowTex = new THREE.CanvasTexture(c);
+  }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunGlowTex, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true }));
+  s.scale.setScalar(air ? 26000 : 11000);
+  s.renderOrder = -1;
+  return s;
 }

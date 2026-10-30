@@ -1,6 +1,12 @@
 # Changelog
 
 ## v0.6 (prompt 6: visual overhaul)
+### Part 3 (steps 6–7)
+- **Sky**: the big planet balls are gone. Other planets are bright, star-like points that move with the sky. A planet's own moons are cratered globes at a realistic size (about 1.5° across) that orbit and show phases; by day only their sunlit side shows. From a moon, the parent planet hangs in the sky with phases and a glowing rim of air
+- **Air chemistry sets the sky**: Verdara is Earth-like (blue sky, orange sunsets), Ruska is dusty CO₂ like Mars (butterscotch days, blue sunsets), Xeno Prime has a thick yellow-orange sulfur haze and Glacia's methane turns its sky teal. The make-up of the air is shown when you land, on the star map and in the pause menu
+- **Lighting**: soft shadows that grow long at sunrise and sunset (the shadow area follows the low sun), sky light from above and ground bounce from below, darker hollows and rock bases (ambient occlusion), haze that thickens with each atmosphere, a glow around the sun that warms and widens when it's low, and light rays fanning out from a low sun
+- **Detail Low / Medium / High** (Options): sets terrain resolution, how far grass, plants and trees are drawn, texture size and relief, shadow quality, haze distance and light rays. Low is tuned for older tablets (about 185k triangles in a dense forest, versus about 320k on Medium)
+
 ### Part 2 (steps 4–5)
 - **Textured ground**: the ground uses CC0 photo textures with relief (normal maps): grass, dirt, sand, rock, gravel, snow, moon dust, ice and alien ground. They blend by biome, height (sand at the shore, gravel on the sea floor, snow up high and in the cold) and slope (bare rock on steep ground). Each planet keeps its own colours, and texture detail fades out with distance so it stays smooth and cheap
 - **Nature**: grass that moves in the wind, bushes, broadleaf and conifer trees, swamp palms, bare trees, cacti, dry shrubs, alien bulbs, tube corals and giant glowing mushrooms, and rocks of every size up to boulders and slabs. Ruska, Umbros and Xeno Prime also have tall rock pillars and natural arches. What grows where depends on the biome. Everything is drawn instanced, with simpler models far away, and grows in smoothly at the edge of the view instead of popping

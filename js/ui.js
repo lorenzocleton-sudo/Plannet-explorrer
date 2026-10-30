@@ -52,7 +52,8 @@ $('pQuit').onclick = () => { writeSave(); showMenu('title'); };
 for (const k of ['codex', 'map', 'build', 'machine', 'tech']) menus[k].addEventListener('click', e => { if (e.target === menus[k] && performance.now() - menuOpenedAt > 400) goBack(); });
 
 function renderPause() {
-  $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Inventory ${invTotal(playerInv())}/${invCap()}`;
+  const air = world.body.atmo ? ` · Air: ${world.body.atmo.comp}` : ' · No atmosphere';
+  $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Inventory ${invTotal(playerInv())}/${invCap()}${air}`;
   const pm = $('pMap');
   pm.disabled = !atLander();
   pm.textContent = atLander() ? 'Star Map' : 'Star Map (go to lander)';
@@ -149,7 +150,8 @@ function renderCodex() {
 // ---------- star map ----------
 function atmoText(b) {
   if (!save.atmo[b.id]) return 'Atmosphere: unknown';
-  return b.breathable ? 'Atmosphere: breathable' : 'No breathable oxygen';
+  const comp = b.atmo ? ` · ${b.atmo.comp}` : '';
+  return (b.breathable ? 'Atmosphere: breathable' : b.atmo ? 'No breathable oxygen' : 'No atmosphere') + comp;
 }
 function unlock(i) {
   const P = PLANETS[i];

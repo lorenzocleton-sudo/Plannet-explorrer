@@ -103,8 +103,9 @@ function land(bodyId, resumed = false) {
   arrival = {
     t: 0, ok: body.breathable,
     title: `${body.name}${body.type === 'moon' ? ' (moon)' : ''}`,
-    text: body.breathable ? 'Atmosphere: breathable' : (body.type === 'moon' ? 'No atmosphere: no oxygen' : 'Atmosphere: no breathable oxygen'),
-    sub: `Gravity ${body.g.toFixed(1)} m/s²` + (firstVisit ? ' · first visit' : ''),
+    text: body.atmo ? `${body.breathable ? 'Breathable air' : 'Not breathable'} · ${body.atmo.kind.replace(/ \(.*\)/, '')}`
+      : (body.type === 'moon' ? 'No atmosphere: no oxygen' : 'No atmosphere'),
+    sub: (body.atmo ? `Air: ${body.atmo.comp} · ` : '') + `Gravity ${body.g.toFixed(1)} m/s²` + (firstVisit ? ' · first visit' : ''),
   };
 }
 
@@ -551,8 +552,14 @@ function syncScene() {
   STARS.position.copy(camera.position);
   // helmet light points where you're looking, a little down
   updateLights(world, up, _a.copy(player.pos).addScaledVector(up, 1.7), _c.copy(player.pos).addScaledVector(player.fwd, 14).addScaledVector(up, -2));
-  world.sun.position.copy(player.pos).addScaledVector(world.sunDir, 90);
-  world.sun.target.position.copy(player.pos);
+  // low sun: shadows get long, so the shadow area grows and moves the way they fall
+  const sa = up.dot(world.sunDir), low = 1 - smooth(0.08, 0.45, sa), half = 45 + low * 45;
+  const sc = world.sun.shadow.camera;
+  if (Math.abs(sc.right - half) > 1) { sc.left = sc.bottom = -half; sc.right = sc.top = half; sc.updateProjectionMatrix(); }
+  _a.copy(world.sunDir).addScaledVector(up, -sa);
+  if (_a.lengthSq() > 1e-6) _a.normalize().multiplyScalar(-low * half * 0.55);
+  world.sun.target.position.copy(player.pos).add(_a);
+  world.sun.position.copy(world.sun.target.position).addScaledVector(world.sunDir, 200);
   world.lander.beacon.material.color.setHex(Math.sin(time * 4) > 0 ? 0xff4040 : 0x501010);
   world.landerLabel.visible = opts.labels !== 'off' && landerVisible();
 

@@ -240,7 +240,8 @@ function makeRock(seed, detail, elong = 1, flat = 0.75) {
       const n = 1 + (fbm3(x * 1.3 + seed % 97, y * 1.3, z * 1.3, seed, 4) - 0.5) * 0.9 + (vnoise3(x * 5, y * 5, z * 5, seed + 3) - 0.5) * 0.12;
       let py = y * n * flat;
       if (py < -0.15) py = -0.15 + (py + 0.15) * 0.3;
-      row.push(b.v(x * n * sx, py, z * n * sz, w));
+      const ao = 0.5 + 0.5 * smooth(-0.15, 0.55, py); // darker where the rock meets the ground
+      row.push(b.v(x * n * sx, py, z * n * sz, [ao, ao, ao]));
     }
     idx.push(row);
   }
