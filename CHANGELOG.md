@@ -34,6 +34,11 @@
 - Interact with any machine to open its panel (status, power, storage, recipes, take items, deconstruct); interact with the lander to move items between your inventory and its hold
 - Machine labels show live status ("Smelter · Iron Plate 45%", "no power", "needs ice"); the old free drill tool is gone, drills are machines now
 
+### Stage 5: progression
+- Tech tree (pause menu or the lander panel): spend Research Points from analyzed samples. Basic Industry (drill, crate, smelter, solar) is free; Fabrication unlocks the Fabricator, Gears and Circuits, then Energy Storage, Life Support, Fuel Refining and the upgrades
+- Upgrades are researched, then crafted at a Fabricator: Bigger Oxygen Tank, Cold Suit, Heat Suit, Faster Drills, Better Helmet Light, Bigger Backpack, Cargo Exoframe, and the Long-range Scanner tool
+- Travelling costs Rocket Fuel from the lander's hold (or crates next to it): 4 to hop between a planet and its moons, 9–22 between planets, so you have to build a fuel setup (Refinery + Ice + power) before you can leave
+
 ## v0.4 (prompt 4)
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill

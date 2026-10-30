@@ -159,7 +159,12 @@ function bodyInfo(b) {
 }
 function destButton(b) {
   if (b.id === save.current) return `<button disabled>You are here</button>`;
-  if (isUnlocked(b)) return `<button onclick="travelTo('${b.id}')">Travel here</button>`;
+  if (isUnlocked(b)) {
+    // travelling burns rocket fuel from the lander's hold
+    const need = fuelCost(bodyById(save.current), b), have = fuelAvailable(), ok = freeTravel() || have >= need;
+    return `<button ${ok ? '' : 'disabled'} onclick="travelTo('${b.id}')">Travel · ${need} fuel${ok ? '' : ` (have ${have})`}</button>`
+      + (ok ? '' : '<p class="warn">Not enough Rocket Fuel in the lander. Build a Fuel Refinery near it and feed it Ice.</p>');
+  }
   if (b.type === 'moon') return `<button disabled>Unlock ${b.parent.name} first</button>`;
   return `<button ${save.rp >= b.cost ? '' : 'disabled'} onclick="unlock(${b.idx})">Unlock · ${b.cost} RP</button>`;
 }
@@ -191,6 +196,10 @@ function mapSelect(id) {
   renderMapInfo();
 }
 function travelTo(id) {
-  if (!isUnlocked(bodyById(id))) return;
+  const b = bodyById(id);
+  if (!isUnlocked(b)) return;
+  const need = fuelCost(bodyById(save.current), b);
+  if (!freeTravel() && !payCost({ fuel: need }, fuelStores())) { toast(`You need ${need} Rocket Fuel in the lander to fly there.`, 'bad'); return; }
+  writeSave();
   travel(id);
 }

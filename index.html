@@ -92,6 +92,15 @@
   .irows{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
   .irow{display:flex;align-items:center;gap:6px}
   button.sm2{padding:5px 10px;font-size:12px}
+  .ttree{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  @media (max-width:820px){.ttree{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .tcol{display:flex;flex-direction:column;gap:8px}
+  .tcol h4{margin:0}
+  .tnode{background:#161c3a;border:1px solid #27305e;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+  .tnode.done{border-color:#4cc46a}
+  .tnode.locked{opacity:.5}
+  .tnode p{margin:0;font-size:12px}
+  .tnode button{padding:6px 10px;font-size:13px}
   #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 360px);min-width:240px}
   .toast{background:rgba(16,20,42,.92);border:1px solid #3b4a8a;border-radius:8px;padding:6px 14px;font-size:14px;transition:opacity .5s;text-align:center}
   .toast.new{border-color:#ffd166;color:#ffe3a1}
@@ -172,6 +181,7 @@
       <button id="pResume">Resume</button>
       <button class="ghost" id="pCodex">Research Codex</button>
       <button class="ghost" id="pMap">Star Map</button>
+      <button class="ghost" id="pTech">Tech Tree</button>
       <button class="ghost" id="pOpt">Options</button>
       <div id="pDebug" class="stack" style="margin-top:0">
         <button class="ghost" id="pFly">Toggle fly mode</button>
@@ -228,6 +238,7 @@
 </div>
 
 <div class="overlay" id="codex"><div class="panel" id="codexBody"></div></div>
+<div class="overlay" id="tech"><div class="panel" id="techBody" style="max-width:1100px"></div></div>
 <div class="overlay" id="machine"><div class="panel" id="machineBody" style="max-width:860px"></div></div>
 <div class="overlay" id="buildMenu"><div class="panel" id="buildBody" style="max-width:900px"></div></div>
 <div class="overlay" id="starmap">
@@ -257,6 +268,7 @@
 <script src="js/build.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/panels.js"></script>
+<script src="js/tech.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/starmap.js"></script>
 <script src="js/cutscene.js"></script>

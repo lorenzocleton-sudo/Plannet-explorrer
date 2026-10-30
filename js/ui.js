@@ -1,7 +1,7 @@
 'use strict';
 // ---------- menus, codex, star map, HUD ----------
 const menus = {
-  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'), machine: $('machine'),
+  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'), machine: $('machine'), tech: $('tech'),
 };
 let menuOpenedAt = 0, menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause = 0;
 
@@ -15,6 +15,7 @@ function showMenu(name, back = null) {
   if (name === 'map') renderMap();
   if (name === 'build') renderBuildMenu();
   if (name === 'machine') renderPanel();
+  if (name === 'tech') renderTech();
   if (document.pointerLockElement) { suppressUnlockPause = true; document.exitPointerLock(); }
 }
 function resume() {
@@ -45,8 +46,9 @@ $('pResume').onclick = resume;
 $('pCodex').onclick = () => showMenu('codex', 'pause');
 $('pMap').onclick = () => openStarMap('pause');
 $('pOpt').onclick = () => showMenu('options', 'pause');
+$('pTech').onclick = () => openTech('pause');
 $('pQuit').onclick = () => { writeSave(); showMenu('title'); };
-for (const k of ['codex', 'map', 'build', 'machine']) menus[k].addEventListener('click', e => { if (e.target === menus[k] && performance.now() - menuOpenedAt > 400) goBack(); });
+for (const k of ['codex', 'map', 'build', 'machine', 'tech']) menus[k].addEventListener('click', e => { if (e.target === menus[k] && performance.now() - menuOpenedAt > 400) goBack(); });
 
 function renderPause() {
   $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Inventory ${invTotal(playerInv())}/${invCap()}`;
