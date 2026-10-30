@@ -18,6 +18,12 @@
 - Colours blend naturally from beach to lowland to rock to peaks, with snow caps on Verdara and Glacia and bare rock on steep slopes
 - Sea coverage per planet: Verdara ~50%, Ruska ~30%, Glacia ~65%, Umbros ~45%, Xeno Prime ~55%
 
+### Part 3: atmosphere and clouds
+- Verdara, Ruska, Glacia and Xeno Prime have an atmosphere: a glowing sky shell (blue/rust/pale/yellow-green) that colours the sky from the ground, turns orange near sunrise and sunset, fades with height, and shows as a glowing rim from space and in the travel cutscene
+- Those planets also get a moving cloud layer, lit by the sun and visible both from below and from orbit
+- Umbros and all moons have no atmosphere: black sky with stars and no clouds
+- Distance haze matches the sky colour and clears when you fly above the air
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

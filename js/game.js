@@ -464,16 +464,12 @@ function syncScene() {
   camera.lookAt(head);
 
   // day / night from where you stand relative to the sun
-  const night = smooth(0.15, -0.25, up.dot(SUN_DIR));
-  if (B.type === 'planet') {
-    world.scene.background.copy(world.skyColor).lerp(_NIGHT, night);
-    if (world.scene.fog) world.scene.fog.color.copy(world.scene.background);
-    STARS.material.opacity = B.dark ? 1 : night;
-  } else STARS.material.opacity = 1;
+  const night = smooth(0.15, -0.25, updateSky(world, up, world.sunDir));
+  if (world.clouds) world.clouds.rotation.y = time * B.atmo.wind;
   STARS.position.copy(camera.position);
   world.lamp.intensity = B.dark ? 1.6 : night * 1.3;
   world.lamp.position.copy(player.pos).addScaledVector(up, 3);
-  world.sun.position.copy(player.pos).addScaledVector(SUN_DIR, 90);
+  world.sun.position.copy(player.pos).addScaledVector(world.sunDir, 90);
   world.sun.target.position.copy(player.pos);
   world.lander.beacon.material.color.setHex(Math.sin(time * 4) > 0 ? 0xff4040 : 0x501010);
   world.landerLabel.visible = opts.labels !== 'off' && landerVisible();
@@ -491,4 +487,3 @@ function syncScene() {
   updateTerrain(world, camera.position);
   if ((cellT -= 1 / 60) <= 0) { cellT = 0.25; updateSampleCells(world); }
 }
-const _NIGHT = new THREE.Color('#05060f');

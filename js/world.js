@@ -265,7 +265,9 @@ const STARS = (() => {
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   const m = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, depthWrite: false });
   sharedGeos.add(g); sharedMats.add(m);
-  return new THREE.Points(g, m);
+  const pts = new THREE.Points(g, m);
+  pts.renderOrder = -2;
+  return pts;
 })();
 
 function skyBall(color, radius, dir, dist) {
@@ -286,9 +288,15 @@ function genBody(body) {
 
   const scene = new THREE.Scene();
   w.scene = scene;
-  w.skyColor = new THREE.Color(body.type === 'planet' ? body.sky : '#000000');
-  scene.background = w.skyColor.clone();
-  if (body.type === 'planet') scene.fog = body.dark ? new THREE.Fog(w.skyColor.clone(), 10, 140) : new THREE.Fog(w.skyColor.clone(), 900, 9000);
+  scene.background = new THREE.Color('#000000');
+  w.sunDir = SUN_DIR.clone();
+  // air: glowing sky shell + moving clouds; airless worlds keep a black, starry sky
+  if (body.atmo) {
+    scene.fog = new THREE.Fog(new THREE.Color(body.atmo.color), 700, 11000);
+    w.atmo = makeAtmosphere(R, R + Math.max(900, R * 0.12), body.atmo);
+    w.clouds = makeClouds(body, R + body.mount * 1.25 + 300);
+    scene.add(w.atmo, w.clouds);
+  } else if (body.dark) scene.fog = new THREE.Fog(new THREE.Color('#000000'), 10, 140);
 
   initTerrain(w);
 

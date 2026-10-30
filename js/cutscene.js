@@ -18,8 +18,11 @@ const space = (() => {
   const ship = makeLander();
   ship.group.rotation.x = Math.PI / 2; // nose (+Y) pointing along +Z, the flight direction
   ship.flame.visible = true;
-  scene.add(origin, dest, ship.group);
-  return { scene, origin, dest, ship };
+  // atmosphere glows around the two worlds (only shown for worlds with air)
+  const glow = () => { const g = makeAtmosphere(1, 1.12, { color: '#ffffff', sunset: '#ffffff' }); g.material.uniforms.uSun.value.copy(sun.position).normalize(); return g; };
+  const originGlow = glow(), destGlow = glow();
+  scene.add(origin, dest, ship.group, originGlow, destGlow);
+  return { scene, origin, dest, ship, originGlow, destGlow };
 })();
 const surfaceColor = b => bodyColor(b, b.type === 'planet' ? 'plains' : 'dust');
 
@@ -92,6 +95,14 @@ function updateCutscene(dt) {
     space.origin.position.set(-160, -140, -320 - f * 900);
     space.dest.scale.setScalar(60 + c.dest.R / 70);
     space.dest.position.set(40, -60, 1300 - f * 900);
+    for (const [ball, glow, b] of [[space.origin, space.originGlow, c.from], [space.dest, space.destGlow, c.dest]]) {
+      glow.visible = !!b.atmo;
+      if (!b.atmo) continue;
+      const u = glow.material.uniforms, r = ball.scale.x;
+      glow.position.copy(ball.position); glow.scale.setScalar(r);
+      u.uCenter.value.copy(ball.position); u.uR.value = r; u.uRa.value = r * 1.12;
+      u.uColor.value.set(b.atmo.color); u.uSunset.value.set(b.atmo.sunset);
+    }
     space.ship.group.position.set(0, Math.sin(time * 2) * 0.3, 0);
     space.ship.group.rotation.z = Math.sin(time * 0.8) * 0.15;
     space.ship.flame.scale.set(1, 1 + Math.random() * 0.5, 1);
@@ -117,14 +128,10 @@ function updateCutscene(dt) {
 // sky colour / lights for the world scene while the player isn't driving the camera
 function syncSky() {
   const w = world, up = _cu.copy(camera.position).normalize(), B = w.body;
-  const night = smooth(0.15, -0.25, up.dot(SUN_DIR));
-  if (B.type === 'planet') {
-    w.scene.background.copy(w.skyColor).lerp(_NIGHT, night);
-    if (w.scene.fog) w.scene.fog.color.copy(w.scene.background);
-    STARS.material.opacity = B.dark ? 1 : night;
-  } else STARS.material.opacity = 1;
+  updateSky(w, up, w.sunDir);
+  if (w.clouds) w.clouds.rotation.y = time * B.atmo.wind;
   STARS.position.copy(camera.position);
-  w.sun.position.copy(w.landerPos).addScaledVector(SUN_DIR, 90);
+  w.sun.position.copy(w.landerPos).addScaledVector(w.sunDir, 90);
   w.sun.target.position.copy(w.landerPos);
   w.lamp.intensity = 0;
 }
