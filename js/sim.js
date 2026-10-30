@@ -43,6 +43,7 @@ function rebuildLinks(w, withLander = true) {
   nodes.forEach((n, i) => { const g = find(i); if (!grids.has(g)) grids.set(g, { nodes: [], users: [], ratio: 0, gen: 0, demand: 0 }); grids.get(g).nodes.push(n); n.grid = grids.get(g); });
   const storeNodes = [...(withLander ? [L] : []), ...w.buildings.filter(b => b.type === 'crate')];
   for (const b of w.buildings) {
+    if (nodes.includes(b)) { b.stores = []; continue; } // power sources already belong to their grid
     b.grid = null;
     if (b.def.power) {
       let best = null, bd = POWER_RANGE;

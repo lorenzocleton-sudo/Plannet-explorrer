@@ -36,12 +36,12 @@ renderer.domElement.addEventListener('webglcontextlost', e => {
 });
 renderer.domElement.addEventListener('webglcontextrestored', () => { applyGraphics(); toast('Graphics recovered.'); });
 // a startup error must never leave a silent black screen
-function showFatal(err) {
+function showFatal(err, starting = false) {
   console.error(err);
   const d = document.createElement('div');
   d.id = 'fatal';
-  d.innerHTML = `<b>The game could not start.</b><br>${String(err && err.message || err).replace(/</g, '&lt;')}<br><br>`
-    + `This usually means the browser kept some old game files. Tap Reload; if it keeps happening, please report this message.<br><br>`;
+  d.innerHTML = `<b>${starting ? 'The game could not start.' : 'The game hit an error and is stuck.'}</b><br>${String(err && err.message || err).replace(/</g, '&lt;')}<br><br>`
+    + `Your progress is saved. Tap Reload; if it keeps happening, please report this message.<br><br>`;
   const b = document.createElement('button');
   b.textContent = 'Reload';
   b.onclick = () => location.replace(location.pathname + '?r=' + Date.now());
@@ -51,4 +51,4 @@ function showFatal(err) {
 resize();
 requestAnimationFrame(frame); // start the loop first so menus and HUD work even if landing fails
 try { land(save.current, true); arrival = null; }
-catch (err) { showFatal(err); }
+catch (err) { showFatal(err, true); }

@@ -1,6 +1,9 @@
 # Changelog
 
 ## v0.5 (prompt 5: survival factory)
+### Fix: error after placing a Smelter
+- Placing a powered machine (Smelter, Oxygen Generator, Fuel Refinery, Fabricator) closer to a Solar Panel or Battery than to the lander crashed the power network setup ("Cannot read properties of null (reading 'users')"), and the saved base kept crashing after reload. Machines now join the nearest power source's network correctly
+
 ### Fix: black screen after the last update
 - The browser could keep some old game files and load them next to new ones, so the game stopped while starting (black screen, empty star map). Game files now carry a version tag, so an update always loads the full new set
 - If starting ever fails, a message with a Reload button now appears instead of a silent black screen
