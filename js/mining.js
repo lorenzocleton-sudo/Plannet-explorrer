@@ -221,9 +221,9 @@ promptHooks.push(() => {
   const sp = nearestSpot();
   const isDrill = TOOLS[tool].id === 'drill';
   if (!sp) return isDrill ? `Find a mining spot (labelled "deposit") · ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX} drills free` : '';
-  if (!isDrill) return `Switch to Drill [3] to mine ${sp.res.name}`;
+  const k = isDrill ? KEY.use : KEY.interact;
   const st = drillState(sp);
-  if (!st) return `[E] Place drill on ${sp.res.name} (${TIER_NAMES[sp.res.tier]}, ${sp.depth} m deep) · ${DRILLS_MAX - drillsPlaced()} free`;
+  if (!st) return `${k} Place drill on ${sp.res.name} (${TIER_NAMES[sp.res.tier]}, ${sp.depth} m deep) · ${DRILLS_MAX - drillsPlaced()} free`;
   const left = st.units >= DRILL_CAP ? 'full' : `next in ${Math.ceil(st.next)}s`;
-  return st.units > 0 ? `[E] Collect ${st.units} ${sp.res.name} (${left}) · hold to pack up drill` : `Drilling ${sp.res.name}… ${left} · hold [E] to pack up drill`;
+  return st.units > 0 ? `${k} Collect ${st.units} ${sp.res.name} (${left}) · hold to pack up drill` : `Drilling ${sp.res.name}… ${left} · hold ${k} to pack up drill`;
 });

@@ -11,7 +11,7 @@ function toggleFly() {
   if (!debugOn()) return;
   flying = !flying;
   if (!flying) { player.fallTop = player.pos.length(); player.vel.set(0, 0, 0); }
-  toast(flying ? 'Fly mode on (Space up, X down, Shift fast)' : 'Fly mode off');
+  toast(flying ? (isTouch ? 'Fly mode on (UP / DOWN buttons)' : 'Fly mode on (Space up, X down, Shift fast, V to stop)') : 'Fly mode off');
   applyDebug();
 }
 function teleportToLander() {
@@ -43,7 +43,7 @@ for (const [id, set] of [['tUp', v => { touchUp = v; }], ['tDown', v => { touchD
 addEventListener('keydown', e => {
   if (menu || cutscene || e.repeat || !debugOn()) return;
   const k = e.key.toLowerCase();
-  if (k === 'f') toggleFly();
+  if (k === 'v') toggleFly();
   if (k === 't') teleportToLander();
 });
 applyDebug();

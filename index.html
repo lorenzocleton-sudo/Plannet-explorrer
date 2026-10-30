@@ -57,21 +57,29 @@
   #mapInfo .mcard p{margin:4px 0;font-size:13px}
   #mapInfo button{padding:7px 14px;font-size:14px;margin-top:4px}
   @media (max-width:760px),(max-height:520px) and (orientation:portrait){.mapwrap{flex-direction:column}#mapInfo{width:auto;max-height:40%}}
-  #touch .dbg{display:none}
-  body.debug #touch .dbg{display:flex}
-  #touch .dbg button.on{background:rgba(255,194,58,.85);color:#111}
   #skipBtn{display:none;position:fixed;right:16px;bottom:calc(9vh + 12px);z-index:15;background:rgba(10,13,30,.8);border:1px solid #3b4a8a;font-size:15px;padding:10px 18px}
   body.cutscene #skipBtn{display:block}
-  body.cutscene #hotbar, body.cutscene #touch, body.cutscene #toasts{display:none !important}
+  body.cutscene #hotbar, body.cutscene #touch, body.cutscene #toasts, body.cutscene #joy, body.cutscene #tPause, body.cutscene #tDebug{display:none !important}
   #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 360px);min-width:240px}
   .toast{background:rgba(16,20,42,.92);border:1px solid #3b4a8a;border-radius:8px;padding:6px 14px;font-size:14px;transition:opacity .5s;text-align:center}
   .toast.new{border-color:#ffd166;color:#ffe3a1}
   .toast.bad{border-color:#ff6b6b;color:#ffb3b3}
-  #touch{position:fixed;right:12px;bottom:12px;display:none;gap:10px;z-index:5;flex-direction:column;align-items:flex-end}
-  #touch.show{display:flex}
-  #touch .r{display:flex;gap:10px}
-  #touch button{width:70px;height:70px;border-radius:50%;padding:0;font-size:13px;font-weight:700;background:rgba(43,75,209,.75)}
-  #touch button.sm{width:52px;height:52px;font-size:11px;background:rgba(40,48,90,.8)}
+  /* touch controls: fixed joystick bottom-left, three big see-through buttons bottom-right */
+  #joy,#touch,#tPause,#tDebug{display:none}
+  body.touch #joy{display:block;position:fixed;left:28px;bottom:28px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.28);z-index:4;pointer-events:none}
+  #joyKnob{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.45)}
+  body.touch #touch{display:block;position:fixed;right:18px;bottom:18px;width:236px;height:200px;z-index:5;pointer-events:none}
+  #touch .tb{position:absolute;pointer-events:auto;border-radius:50%;padding:0;font-size:13px;font-weight:700;letter-spacing:.5px;color:#fff;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.38);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  #touch .tb:active,#touch .tb.on{background:rgba(255,255,255,.34)}
+  #tAct{right:0;bottom:0;width:100px;height:100px;font-size:15px}
+  #tJump{right:112px;bottom:4px;width:80px;height:80px}
+  #tInteract{right:8px;bottom:112px;width:84px;height:84px;font-size:10px;letter-spacing:0}
+  .tsm{width:46px;height:46px;border-radius:50%;padding:0;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.35)}
+  .tsm.on{background:rgba(255,194,58,.85);color:#111}
+  body.touch #tPause{display:block;position:fixed;right:14px;top:180px;z-index:5}
+  body.touch.debug #tDebug{display:flex;position:fixed;right:14px;top:236px;flex-direction:column;gap:8px;z-index:5}
+  body.touch #hotbar .slot{width:52px;height:52px}
+  body.touch #hotbar .nm{display:none}
   #hotbar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
   #hotbar .slot{position:relative;width:64px;height:60px;padding:0;border-radius:10px;background:rgba(10,13,30,.78);border:2px solid #2b3566;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
   #hotbar .slot.sel{border-color:#9fd8ff;background:rgba(43,75,209,.55)}
@@ -88,11 +96,14 @@
 <div id="hotbar"></div>
 <button id="skipBtn">Skip ▸▸</button>
 
+<div id="joy"><div id="joyKnob"></div></div>
 <div id="touch">
-  <div class="r"><button class="sm" id="tPause">II</button><button class="sm" id="tCodex">CODEX</button><button class="sm" id="tMap">MAP</button></div>
-  <div class="r dbg"><button class="sm" id="tTp">TP</button><button class="sm" id="tFly">FLY</button><button class="sm" id="tUp">UP</button><button class="sm" id="tDown">DOWN</button></div>
-  <div class="r"><button id="tJump">JUMP</button><button id="tScan">SCAN</button><button id="tAct">GRAB</button></div>
+  <button class="tb" id="tInteract">INTERACT</button>
+  <button class="tb" id="tJump">JUMP</button>
+  <button class="tb big" id="tAct">USE</button>
 </div>
+<button class="tsm" id="tPause" aria-label="Pause">II</button>
+<div id="tDebug"><button class="tsm" id="tTp">TP</button><button class="tsm" id="tFly">FLY</button><button class="tsm" id="tUp">UP</button><button class="tsm" id="tDown">DOWN</button></div>
 
 <div class="overlay show" id="title">
   <div class="panel">
@@ -105,6 +116,7 @@
       <li><kbd>Space</kbd> jump</li>
       <li><kbd>1</kbd>–<kbd>3</kbd> / <kbd>Wheel</kbd> switch tool</li>
       <li><kbd>E</kbd> / <kbd>Left click</kbd> use tool</li>
+      <li><kbd>F</kbd> interact (lander, drills, samples)</li>
       <li><kbd>Q</kbd> quick scanner pulse</li>
       <li><kbd>C</kbd> research codex</li>
       <li><kbd>M</kbd> star map (at lander)</li>
@@ -168,7 +180,7 @@
       <label for="oDebug">Debug / admin mode</label><input type="checkbox" id="oDebug">
     </div>
     <div id="debugTools" class="row" style="margin-top:8px">
-      <span class="muted" style="width:100%;font-size:13px">Active: infinite oxygen, god mode (no fall damage), instant drilling. Keys: <kbd>F</kbd> fly (<kbd>Space</kbd> up, <kbd>X</kbd> down, <kbd>Shift</kbd> fast), <kbd>T</kbd> teleport to lander.</span>
+      <span class="muted" style="width:100%;font-size:13px">Active: infinite oxygen, god mode (no fall damage), instant drilling. Keys: <kbd>V</kbd> fly (<kbd>Space</kbd> up, <kbd>X</kbd> down, <kbd>Shift</kbd> fast), <kbd>T</kbd> teleport to lander.</span>
       <button class="ghost" id="oFly">Toggle fly mode</button>
       <button class="ghost" id="oTeleport">Teleport to lander</button>
       <button class="ghost" id="oUnlock">Unlock all planets &amp; moons</button>

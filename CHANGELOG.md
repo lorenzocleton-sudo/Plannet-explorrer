@@ -36,6 +36,13 @@
 - Sunlight warms to orange near sunrise/sunset on worlds with air; nights are properly dark
 - Helmet light: a spotlight pointing where you look plus a soft glow around you switches on at dusk, so night stays playable
 
+### Part 6: cleaner tablet controls
+- One fixed joystick in the bottom-left corner to move; drag anywhere on the right side to look around
+- Three big see-through buttons bottom-right: **Jump**, **Use Tool** (shows the current tool's icon) and **Interact**
+- Compact icon-only tool hotbar at the bottom, and a small pause button under the minimap; the old SCAN / CODEX / MAP buttons are gone (codex and star map are in the pause menu, and Interact opens the star map at the lander)
+- New **Interact** action (`F` on keyboard): opens the star map at the lander, places/collects/packs up a drill at a mining spot, or picks up / digs up the nearest sample with any tool selected
+- Prompts name the right control for your device (USE / INTERACT on touch, E / F on keyboard); debug fly mode moved from `F` to `V`
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

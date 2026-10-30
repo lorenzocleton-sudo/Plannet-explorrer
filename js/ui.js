@@ -8,7 +8,7 @@ let menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause 
 function showMenu(name, back = null) {
   for (const k in menus) menus[k].classList.toggle('show', k === name);
   menu = name; menuBack = back;
-  keys.clear(); touchAct = mouseUse = false;
+  keys.clear(); touchAct = touchInteract = mouseUse = false;
   if (name === 'pause') renderPause();
   if (name === 'options') renderOptions();
   if (name === 'codex') renderCodex();
@@ -172,7 +172,7 @@ TOOLS.forEach((T, i) => {
 });
 function renderHotbar() {
   [...hotbar.children].forEach((b, i) => b.classList.toggle('sel', i === tool));
-  $('tAct').textContent = { scanner: 'SCAN', collector: 'GRAB', drill: 'DRILL' }[TOOLS[tool].id];
+  $('tAct').textContent = 'USE ' + TOOLS[tool].icon;
 }
 renderHotbar();
 
@@ -180,12 +180,12 @@ renderHotbar();
 const tAct = $('tAct');
 tAct.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAct.addEventListener(ev, () => { touchAct = false; }));
-$('tScan').addEventListener('pointerdown', e => { doScan(); e.preventDefault(); });
+const tInt = $('tInteract');
+tInt.addEventListener('pointerdown', e => { touchInteract = true; e.preventDefault(); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tInt.addEventListener(ev, () => { touchInteract = false; }));
 $('tJump').addEventListener('pointerdown', e => { jumpQueued = true; e.preventDefault(); });
-$('tCodex').addEventListener('click', () => { if (!menu) showMenu('codex'); });
-$('tMap').addEventListener('click', () => { if (!menu) openStarMap(); });
 $('tPause').addEventListener('click', () => { if (!menu) showMenu('pause'); });
-if (isTouch) { $('touch').classList.add('show'); document.body.classList.add('touch'); }
+if (isTouch) document.body.classList.add('touch');
 
 // ---------- HUD ----------
 function rr(x, y, w, h, r) {
@@ -323,10 +323,12 @@ function drawHUD(dt) {
   // prompt
   const near = nearestItem();
   let prompt = '';
-  if (atLander()) prompt = 'Lander: samples analyzed, O₂ refilling · [M] Star map';
+  if (atLander()) prompt = `Lander: samples analyzed, O₂ refilling · ${KEY.interact} Star map`;
   else if (toolPrompt()) prompt = toolPrompt();
-  else if (near && TOOLS[tool].id === 'collector') prompt = near.cat === 'fossil' ? `Hold [E] to excavate ${spName(near.sp)}` : `[E] Collect ${spName(near.sp)}`;
-  else if (near) prompt = `Switch to Collector [2] to pick up ${spName(near.sp)}`;
+  else if (near) {
+    const k = TOOLS[tool].id === 'collector' ? KEY.use : KEY.interact;
+    prompt = near.cat === 'fossil' ? `Hold ${k} to excavate ${spName(near.sp)}` : `${k} Collect ${spName(near.sp)}`;
+  }
   if (prompt) {
     hx.font = '15px system-ui,sans-serif';
     const w = hx.measureText(prompt).width + 28;
@@ -369,18 +371,10 @@ function drawHUD(dt) {
     hx.fillStyle = '#111'; hx.fillText(t, 18, VH - 41);
   }
   hx.fillStyle = 'rgba(255,255,255,.45)'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'bottom';
-  hx.fillText(`Planet Explorer v${VERSION} · [Esc] Pause · [C] Codex` + (opts.fps ? ` · ${Math.round(fps)} FPS` : ''), 10, VH - 8);
+  hx.fillText(`Planet Explorer v${VERSION}` + (isTouch ? '' : ' · [Esc] Pause · [C] Codex') + (opts.fps ? ` · ${Math.round(fps)} FPS` : ''), 10, VH - 8);
   if (!isTouch && !document.pointerLockElement && !menu) {
     hx.textAlign = 'center'; hx.textBaseline = 'middle'; hx.font = '13px system-ui,sans-serif';
     hx.fillStyle = 'rgba(255,255,255,.6)'; hx.fillText('Click to capture the mouse for camera control', VW / 2, VH - 150);
     hx.textAlign = 'left';
-  }
-
-  if (joy.active) {
-    hx.strokeStyle = 'rgba(255,255,255,.3)'; hx.lineWidth = 2;
-    hx.beginPath(); hx.arc(joy.ox, joy.oy, 50, 0, Math.PI * 2); hx.stroke();
-    const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.min(50, Math.hypot(dx, dy)), a = Math.atan2(dy, dx);
-    hx.fillStyle = 'rgba(255,255,255,.35)';
-    hx.beginPath(); hx.arc(joy.ox + Math.cos(a) * l, joy.oy + Math.sin(a) * l, 20, 0, Math.PI * 2); hx.fill();
   }
 }

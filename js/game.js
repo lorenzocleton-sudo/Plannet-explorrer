@@ -201,9 +201,16 @@ function fossilSignal() {
 
 // ---------- input ----------
 const keys = new Set();
-const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, active: false };
+const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, active: false }, JOY_R = 55;
+function moveKnob() {
+  let dx = joy.x - joy.ox, dy = joy.y - joy.oy;
+  const l = Math.hypot(dx, dy);
+  if (l > JOY_R) { dx *= JOY_R / l; dy *= JOY_R / l; }
+  $('joyKnob').style.transform = `translate(${dx}px,${dy}px)`;
+}
+function releaseJoy() { joy.id = null; joy.active = false; $('joyKnob').style.transform = ''; }
 const look = { id: null, x: 0, y: 0 };
-let touchAct = false, mouseUse = false, actPrev = false, jumpQueued = false;
+let touchAct = false, touchInteract = false, mouseUse = false, actPrev = false, interPrev = false, jumpQueued = false;
 
 // ---------- tool hotbar ----------
 const TOOLS = [
@@ -217,6 +224,8 @@ function selectTool(i) {
   digT = 0; digTarget = null;
   renderHotbar();
 }
+// control names shown in prompts
+const KEY = isTouch ? { use: 'USE', interact: 'INTERACT' } : { use: '[E]', interact: '[F]' };
 // the drill tool lives in mining.js; extra bottom-bar prompts can be registered here
 const promptHooks = [];
 
@@ -242,7 +251,7 @@ addEventListener('keydown', e => {
   keys.add(k);
 });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-addEventListener('blur', () => { keys.clear(); touchAct = mouseUse = false; joy.active = false; if (menu === null) showMenu('pause'); });
+addEventListener('blur', () => { keys.clear(); touchAct = touchInteract = mouseUse = false; releaseJoy(); if (menu === null) showMenu('pause'); });
 
 function rotateCam(dx, dy) {
   const s = 0.0028 * opts.sens;
@@ -276,21 +285,26 @@ addEventListener('mousemove', e => {
 const cvs = renderer.domElement;
 cvs.addEventListener('touchstart', e => {
   for (const t of e.changedTouches) {
-    if (t.clientX < VW / 2 && joy.id === null) { joy.id = t.identifier; joy.ox = joy.x = t.clientX; joy.oy = joy.y = t.clientY; joy.active = true; }
+    // the joystick is fixed bottom-left; any touch in that corner of the screen grabs it
+    if (t.clientX < VW * 0.45 && t.clientY > VH * 0.3 && joy.id === null) {
+      const r = $('joy').getBoundingClientRect();
+      joy.id = t.identifier; joy.ox = r.left + r.width / 2; joy.oy = r.top + r.height / 2; joy.x = t.clientX; joy.y = t.clientY; joy.active = true;
+      moveKnob();
+    }
     else if (look.id === null) { look.id = t.identifier; look.x = t.clientX; look.y = t.clientY; }
   }
   e.preventDefault();
 }, { passive: false });
 cvs.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
-    if (t.identifier === joy.id) { joy.x = t.clientX; joy.y = t.clientY; }
+    if (t.identifier === joy.id) { joy.x = t.clientX; joy.y = t.clientY; moveKnob(); }
     if (t.identifier === look.id && !menu) { rotateCam((t.clientX - look.x) * 1.6, (t.clientY - look.y) * 1.6); look.x = t.clientX; look.y = t.clientY; }
   }
   e.preventDefault();
 }, { passive: false });
 const endTouch = e => {
   for (const t of e.changedTouches) {
-    if (t.identifier === joy.id) { joy.id = null; joy.active = false; }
+    if (t.identifier === joy.id) releaseJoy();
     if (t.identifier === look.id) look.id = null;
   }
 };
@@ -312,7 +326,7 @@ function update(dt) {
   if (keys.has('a') || keys.has('arrowleft')) r -= 1;
   if (joy.active) {
     const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.hypot(dx, dy);
-    if (l > 8) { r += dx / Math.max(l, 50); f -= dy / Math.max(l, 50); }
+    if (l > 8) { r += dx / Math.max(l, JOY_R); f -= dy / Math.max(l, JOY_R); }
   }
   const move = _m.set(0, 0, 0).addScaledVector(player.fwd, f).addScaledVector(right, r);
   const len = move.length();
@@ -382,11 +396,17 @@ function update(dt) {
   const act = keys.has('e') || mouseUse || touchAct;
   const pressed = act && !actPrev;
   actPrev = act;
+  // Interact (F / INTERACT): the lander's star map, a drill, or the nearest sample - whatever is closest at hand
+  const inter = keys.has('f') || touchInteract;
+  const iPressed = inter && !interPrev;
+  interPrev = inter;
   const tid = TOOLS[tool].id;
+  const near = nearestItem(), spot = nearestSpot();
   if (tid === 'scanner' && pressed) doScan();
-  if (tid === 'drill') useDrill(act, pressed, dt);
-  const near = nearestItem();
-  if (near && act && tid === 'collector') {
+  if (iPressed && atLander()) openStarMap();
+  else if (spot && (inter || tid === 'drill')) useDrill(act || inter, pressed || iPressed, dt);
+  else if (tid === 'drill') useDrill(act, pressed, dt);
+  if (near && ((act && tid === 'collector') || (inter && !spot))) {
     if (near.cat === 'fossil') {
       if (digTarget !== near) { digTarget = near; digT = 0; }
       digT += dt;
@@ -396,7 +416,10 @@ function update(dt) {
       collect(near);
       pickCd = 0.18;
     }
-  } else { digT = 0; digTarget = null; }
+  } else {
+    digT = 0; digTarget = null;
+    if (iPressed && !spot && !atLander()) toast('Nothing to interact with here. Walk up to a sample, a drill spot or the lander.');
+  }
 
   // scanner pulses reveal as the ring passes
   for (const p of world.pulses) {
