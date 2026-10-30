@@ -54,43 +54,57 @@ function resMat(r) {
 
 function spotLabelText(sp) { return `${sp.res.name} deposit · ${sp.depth} m deep`; }
 
+// Spots are spread over the whole world (plus a few near the lander); their meshes only exist near the player.
+const SPOT_SHOW = 500, SPOT_HIDE = 650;
 function spawnSpots(w) {
-  const body = w.body, R = w.R, rnd = mulberry32(body.seed * 19 + 77), d = new THREE.Vector3();
-  const count = body.type === 'planet' ? 14 : 7;
+  const body = w.body, R = w.R, rnd = mulberry32(body.seed * 19 + 77), d = new THREE.Vector3(), t1 = new THREE.Vector3(), t2 = new THREE.Vector3();
+  const count = Math.max(12, Math.round(4 * Math.PI * R * R / 2.5e6)), nearby = 3;
   w.spots = [];
-  for (let tries = 0; w.spots.length < count && tries < 2000; tries++) {
-    randDir(rnd, d);
+  tangentOf(w.L, t1); t2.copy(w.L).cross(t1);
+  for (let tries = 0; w.spots.length < count && tries < count * 20; tries++) {
+    if (w.spots.length < nearby) { // a few within a short walk of the lander
+      const a = rnd() * Math.PI * 2, dist = 60 + rnd() * 160;
+      d.copy(w.L).multiplyScalar(R).addScaledVector(t1, Math.cos(a) * dist).addScaledVector(t2, Math.sin(a) * dist).normalize();
+    } else randDir(rnd, d);
     const h = groundH(d);
     if (w.hasSea && h < 0.5) continue;
     if (Math.acos(clamp(d.dot(w.L), -1, 1)) * R < 22) continue;
     if (w.spots.some(s => s.dir.distanceTo(d) * R < 30)) continue;
     const res = rollResource(rnd, body);
     const depth = Math.round(5 + res.tier * 16 + rnd() * 10);
-    const sp = { idx: w.spots.length, res, depth, dir: d.clone(), group: new THREE.Group() };
-    const disk = new THREE.Mesh(SPOT_GEO, resMat(res));
-    sp.group.add(disk);
-    for (let i = 0; i < 4; i++) {
-      const o = new THREE.Mesh(ORE_GEO, resMat(res));
-      const a = i / 4 * Math.PI * 2 + rnd();
-      o.position.set(Math.cos(a) * 1.1, 0.05, Math.sin(a) * 1.1);
-      o.rotation.y = rnd() * 3;
-      o.scale.setScalar(0.7 + rnd() * 0.6);
-      sp.group.add(o);
-    }
-    sp.group.traverse(o => { o.castShadow = true; });
-    sp.label = makeLabel(spotLabelText(sp), sp.res.color, 0.6, false);
-    w.scene.add(sp.group, sp.label);
-    placeSpot(sp);
+    const sp = { idx: w.spots.length, res, depth, dir: d.clone(), seed: Math.floor(rnd() * 1e9), group: null, label: null, drill: null };
+    sp.pos = sp.dir.clone().multiplyScalar(R + h);
     w.spots.push(sp);
   }
-  // drills left running here (they keep mining while you're away)
-  const placed = save.drills[body.id] || {};
-  for (const k in placed) if (w.spots[k]) buildDrill(w.spots[k]);
+}
+function showSpot(sp) {
+  const rnd = mulberry32(sp.seed);
+  sp.group = new THREE.Group();
+  sp.group.add(new THREE.Mesh(SPOT_GEO, resMat(sp.res)));
+  for (let i = 0; i < 4; i++) {
+    const o = new THREE.Mesh(ORE_GEO, resMat(sp.res));
+    const a = i / 4 * Math.PI * 2 + rnd();
+    o.position.set(Math.cos(a) * 1.1, 0.05, Math.sin(a) * 1.1);
+    o.rotation.y = rnd() * 3;
+    o.scale.setScalar(0.7 + rnd() * 0.6);
+    sp.group.add(o);
+  }
+  sp.group.traverse(o => { o.castShadow = true; });
+  sp.label = makeLabel(spotLabelText(sp), sp.res.color, 0.6, false);
+  world.scene.add(sp.group, sp.label);
+  if ((save.drills[world.body.id] || {})[sp.idx]) buildDrill(sp);
+  placeSpot(sp);
+}
+function hideSpot(sp) {
+  world.scene.remove(sp.group, sp.label);
+  if (sp.drill) world.scene.remove(sp.drill.group);
+  sp.group = sp.label = sp.drill = null;
 }
 function placeSpot(sp) {
   const r = world.R + groundH(sp.dir);
   sp.r = r;
   sp.pos = sp.dir.clone().multiplyScalar(r);
+  if (!sp.group) return;
   placeOnSurface(sp.group, sp.dir, r);
   sp.label.position.copy(sp.dir).multiplyScalar(r + (sp.drill ? 4.6 : 2.2));
   if (sp.drill) placeOnSurface(sp.drill.group, sp.dir, r + 0.1);
@@ -184,6 +198,10 @@ function unloadCargo() {
 function syncMining() {
   const maxD = Math.max(LABEL_DIST[opts.labels], 60);
   for (const sp of world.spots) {
+    const dist = sp.pos.distanceTo(player.pos);
+    if (!sp.group && dist < SPOT_SHOW) showSpot(sp);
+    else if (sp.group && dist > SPOT_HIDE) hideSpot(sp);
+    if (!sp.group) continue;
     const st = sp.drill ? drillState(sp) : null;
     if (sp.drill) {
       const working = st.units < DRILL_CAP;
@@ -195,7 +213,7 @@ function syncMining() {
     } else if (sp.label.material !== labelMat(spotLabelText(sp), sp.res.color, false).mat) {
       setLabelText(sp.label, spotLabelText(sp), sp.res.color, 0.6, false);
     }
-    sp.label.visible = opts.labels !== 'off' && sp.pos.distanceTo(player.pos) < maxD;
+    sp.label.visible = opts.labels !== 'off' && dist < maxD;
   }
 }
 

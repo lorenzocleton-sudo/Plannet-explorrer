@@ -88,10 +88,10 @@ function updateCutscene(dt) {
     const f = c.t / CS_TIME.space;
     space.origin.material.color.copy(surfaceColor(c.from));
     space.dest.material.color.copy(surfaceColor(c.dest));
-    space.origin.scale.setScalar(c.from.R * 0.4);
-    space.origin.position.set(-10, -30, -60 - f * 900);
-    space.dest.scale.setScalar(c.dest.R * 0.4);
-    space.dest.position.set(10, -20, 1100 - f * 900);
+    space.origin.scale.setScalar(60 + c.from.R / 70);
+    space.origin.position.set(-160, -140, -320 - f * 900);
+    space.dest.scale.setScalar(60 + c.dest.R / 70);
+    space.dest.position.set(40, -60, 1300 - f * 900);
     space.ship.group.position.set(0, Math.sin(time * 2) * 0.3, 0);
     space.ship.group.rotation.z = Math.sin(time * 0.8) * 0.15;
     space.ship.flame.scale.set(1, 1 + Math.random() * 0.5, 1);

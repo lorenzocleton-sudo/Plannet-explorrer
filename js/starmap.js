@@ -3,8 +3,8 @@
 const mapCv = $('mapCanvas'), mx2 = mapCv.getContext('2d');
 const ms = { t: 0, focus: null, sel: null, zoom: 0, w: 0, h: 0, pos: new Map() };
 const ORBIT0 = 90, ORBIT_STEP = 70, SUN_R = 24;
-const planetDrawR = P => 9 + P.R / 30;
-const moonDrawR = M => 2.2 + M.R / 30;
+const planetDrawR = P => 9 + P.R / 1000;
+const moonDrawR = M => 2.2 + M.R / 1000;
 const moonOrbit = (P, k) => planetDrawR(P) + 9 + k * 8;
 const MAP_STARS = (() => { const r = mulberry32(9); return Array.from({ length: 220 }, () => [r(), r(), r() * 1.2 + 0.3]); })();
 
@@ -152,7 +152,7 @@ function bodyInfo(b) {
   let tot = 0, got = 0;
   for (const cat in S) for (const sp of S[cat]) { tot++; if (known(sp)) got++; }
   const drills = Object.keys(save.drills[b.id] || {}).length;
-  return `<p>Gravity ${b.g} m/s² · ${b.type === 'moon' ? 'Radius' : 'Radius'} ${b.R} m</p>
+  return `<p>Gravity ${b.g} m/s² · Radius ${(b.R / 1000).toFixed(1)} km</p>
     <p>${atmoText(b)}</p>
     <p class="muted">${b.desc}</p>
     ${isUnlocked(b) ? `<p>Catalogued ${got}/${tot} species${drills ? ` · ${drills} drill${drills > 1 ? 's' : ''} running` : ''}</p>` : ''}`;

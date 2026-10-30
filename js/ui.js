@@ -207,7 +207,7 @@ function toScreen(p) {
 }
 
 // radar minimap: top-down view of the ground around you, rotated so "up" is where the camera looks
-const RADAR_RANGE = 90, RADAR_RES = 72;
+const RADAR_RANGE = 120, RADAR_RES = 48;
 const radar = document.createElement('canvas');
 radar.width = radar.height = RADAR_RES;
 const rctx = radar.getContext('2d'), radarImg = rctx.createImageData(RADAR_RES, RADAR_RES);
@@ -283,7 +283,7 @@ function drawHUD(dt) {
 
   if (opts.minimap) {
     radarT -= dt;
-    if (radarT <= 0) { updateRadar(); radarT = 0.12; }
+    if (radarT <= 0) { updateRadar(); radarT = 0.25; }
     const ms = Math.min(150, VW * 0.28), rad = ms / 2, cx = VW - rad - 12, cy = rad + 12;
     hx.fillStyle = 'rgba(10,13,30,.78)'; hx.beginPath(); hx.arc(cx, cy, rad + 4, 0, Math.PI * 2); hx.fill();
     hx.imageSmoothingEnabled = true;

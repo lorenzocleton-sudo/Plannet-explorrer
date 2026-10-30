@@ -1,10 +1,10 @@
 'use strict';
 // ---------- renderer, camera, HUD canvas ----------
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
-const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 6500);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 250000);
 const hud = $('hud'), hx = hud.getContext('2d');
 let VW = 0, VH = 0, DPR = 1;
 

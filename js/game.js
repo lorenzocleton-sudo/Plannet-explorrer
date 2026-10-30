@@ -25,7 +25,7 @@ const playerLabel = makeLabel('Researcher', '#9fd8ff', 0.4, false);
 let bag = [], floaters = [];
 let scanT = 0, pickCd = 0, digT = 0, digTarget = null, lowWarned = false, fullWarnT = 0, time = 0;
 let arrival = null; // { t, text, ok }
-let hurtFlash = 0, respawned = false;
+let hurtFlash = 0, respawned = false, cellT = 0;
 
 // ---------- debug / admin mode ----------
 const FLY_SPEED = 22;
@@ -64,6 +64,11 @@ function land(bodyId) {
   digT = 0; digTarget = null; lowWarned = false;
   camState.pitch = 0.35;
   applyGraphics();
+  // build the detailed terrain and samples around the landing site before the first frame
+  syncScene();
+  warmTerrain(world, camera.position);
+  updateSampleCells(world, 99);
+  if (typeof radarT !== 'undefined') radarT = 0;
   arrival = {
     t: 0, ok: body.breathable,
     title: `${body.name}${body.type === 'moon' ? ' (moon)' : ''}`,
@@ -146,7 +151,7 @@ function deposit() {
 
 // health hit 0: respawn at the lander and lose everything carried but not yet deposited
 function die(cause) {
-  for (const it of bag) { it.taken = false; it.mesh.visible = true; }
+  for (const it of bag) { it.taken = false; if (!it.unloaded) it.mesh.visible = true; }
   const lost = bag.length + cargoCount();
   bag = [];
   cargo = {};
@@ -477,10 +482,13 @@ function syncScene() {
   for (const it of world.items) {
     if (it.taken) continue;
     if (it.cat === 'mineral') it.mesh.rotateY(0.01);
-    if (!it.revealed || opts.labels === 'off') { it.label.visible = false; continue; }
     const dist = it.pos.distanceTo(player.pos);
+    it.mesh.visible = it.revealed && dist < ITEM_SHOW;
+    if (!it.revealed || opts.labels === 'off') { it.label.visible = false; continue; }
     it.label.visible = dist < maxD || (it.ping > 0 && dist < SCAN_R + 5);
   }
   syncMining();
+  updateTerrain(world, camera.position);
+  if ((cellT -= 1 / 60) <= 0) { cellT = 0.25; updateSampleCells(world); }
 }
 const _NIGHT = new THREE.Color('#05060f');

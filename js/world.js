@@ -18,7 +18,7 @@ const LANDER_R = 9;
 let world = null;
 
 // ---------- terrain shape ----------
-function heightAt(body, d) {
+function rawHeight(body, d) {
   const x = d.x, y = d.y, z = d.z, s = body.seed, R = body.R;
   if (body.type === 'planet') {
     const c = (fbm3(x * 1.4, y * 1.4, z * 1.4, s, 5) - 0.5) * 4;
@@ -51,19 +51,40 @@ function makeCraters(body) {
     body.craters.push({ x: d.x, y: d.y, z: d.z, r, cosOuter: Math.cos(r * 1.4), depth: r * body.R * (0.18 + rnd() * 0.12) });
   }
 }
+// landing site (cached per body); the ground is flattened into a pad around it
+function siteOf(body) {
+  if (!body.site) {
+    makeCraters(body);
+    const L = findSite(body, mulberry32(body.seed * 17 + 9));
+    body.site = { L, h: Math.max(body.type === 'planet' ? 2 : -1e9, rawHeight(body, L)), cosOuter: Math.cos(30 / body.R) };
+  }
+  return body.site;
+}
+// terrain height (m above the base radius) in direction d (unit vector)
+function heightAt(body, d) {
+  let h = rawHeight(body, d);
+  const S = siteOf(body), dt = d.dot(S.L);
+  if (dt > S.cosOuter) h = lerp(h, S.h, 1 - smooth(12, 28, Math.acos(Math.min(1, dt)) * body.R));
+  return h;
+}
 function biomeOf(body, h, d) {
   if (body.type === 'planet') return h < 0 ? 0 : h < body.hRocky ? 1 : h < body.hCrystal ? 2 : 3;
   if (body.ice && fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3) > 0.55) return 2;
   return h > 3 + (vnoise3(d.x * body.R / 25, d.y * body.R / 25, d.z * body.R / 25, body.seed + 9) - 0.5) * 8 ? 1 : 0;
 }
-function colorOf(body, b, h, d) {
+// slope = how flat the ground is (1 = level, 0 = vertical cliff)
+function colorOf(body, b, h, d, slope = 1) {
   const names = body.type === 'planet' ? PLANET_BIOMES : MOON_BIOMES;
-  const [hh, s, l] = body.col[names[b]];
+  let [hh, s, l] = body.col[names[b]];
   const R = body.R;
   let L = l + (vnoise3(d.x * R / 9, d.y * R / 9, d.z * R / 9, body.seed + 99) - 0.5) * 12;
   if (body.type === 'planet') {
     if (b === 0) L -= Math.min(22, -h * 0.8);
     if (b === 3) L += Math.min(15, (h - body.hCrystal) * 0.3);
+    if (b === 1 && slope < 0.85) { // bare rock on steep slopes
+      const t = smooth(0.85, 0.7, slope), [rh, rs, rl] = body.col.rocky;
+      hh = lerp(hh, rh, t); s = lerp(s, rs, t); L = lerp(L, rl, t);
+    }
   }
   return hsl2rgb(hh, s, L);
 }
@@ -75,13 +96,13 @@ function findSite(body, rnd) {
   for (let i = 0; i < 600; i++) {
     randDir(rnd, d);
     if (i < 250 && d.dot(SUN_DIR) < 0.35) continue; // land in daylight
-    const h = heightAt(body, d);
+    const h = rawHeight(body, d);
     if (body.type === 'planet' && (h < 3 || h > 16)) continue;
     tangentOf(d, t1); t2.copy(d).cross(t1);
     let slope = 0;
     for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       q.copy(d).addScaledVector(t1, a * 5 / body.R).addScaledVector(t2, b * 5 / body.R).normalize();
-      slope = Math.max(slope, Math.abs(heightAt(body, q) - h));
+      slope = Math.max(slope, Math.abs(rawHeight(body, q) - h));
     }
     const score = slope + (d.dot(SUN_DIR) < 0.35 ? 100 : 0);
     if (score < bestScore) { bestScore = score; best = d.clone(); }
@@ -90,41 +111,26 @@ function findSite(body, rnd) {
   return best || new THREE.Vector3(0, 1, 0);
 }
 
-const _rc = new THREE.Vector3();
-function recolorVertex(w, fc, k) {
-  _rc.set(fc.dir[k * 3], fc.dir[k * 3 + 1], fc.dir[k * 3 + 2]);
-  const b = fc.bio[k] = biomeOf(w.body, fc.h[k], _rc);
-  const c = colorOf(w.body, b, fc.h[k], _rc);
-  fc.col[k * 3] = c[0]; fc.col[k * 3 + 1] = c[1]; fc.col[k * 3 + 2] = c[2];
-}
-
-// ---------- terrain grid lookups ----------
-const _gc = { f: 0, x: 0, y: 0 };
-function gridCoord(d) {
-  const ax = Math.abs(d.x), ay = Math.abs(d.y), az = Math.abs(d.z);
-  const f = ax >= ay && ax >= az ? (d.x > 0 ? 0 : 1) : ay >= az ? (d.y > 0 ? 2 : 3) : (d.z > 0 ? 4 : 5);
-  const F = FACES[f], dn = d.dot(F.n), S = world.S;
-  _gc.f = f;
-  _gc.x = (Math.atan(d.dot(F.u) / dn) * 4 / Math.PI + 1) / 2 * S;
-  _gc.y = (Math.atan(d.dot(F.v) / dn) * 4 / Math.PI + 1) / 2 * S;
-  return _gc;
-}
-// terrain height (m above the base radius) in direction d (unit vector)
-function groundH(d) {
-  const g = gridCoord(d), S = world.S, S1 = S + 1;
-  const i = clamp(Math.floor(g.x), 0, S - 1), j = clamp(Math.floor(g.y), 0, S - 1);
-  const u = clamp(g.x - i, 0, 1), v = clamp(g.y - j, 0, 1), H = world.faces[g.f].h, k = j * S1 + i;
-  return (H[k] * (1 - u) + H[k + 1] * u) * (1 - v) + (H[k + S1] * (1 - u) + H[k + S1 + 1] * u) * v;
-}
+const groundH = d => heightAt(world.body, d);
 // surface (or sea surface) radius in direction d
 function surfaceR(d) {
   const h = groundH(d);
   return world.R + (world.hasSea ? Math.max(h, 0) : h);
 }
 function colorAtDir(d) {
-  const g = gridCoord(d), S1 = world.S + 1;
-  const k = (Math.round(g.y) * S1 + Math.round(g.x)) * 3, C = world.faces[g.f].col;
-  return [C[k], C[k + 1], C[k + 2]];
+  const h = groundH(d);
+  return colorOf(world.body, biomeOf(world.body, h, d), h, d);
+}
+// cube face + face coordinates (-1..1) of a direction
+const _fp = { f: 0, s: 0, t: 0 };
+function faceParam(d) {
+  const ax = Math.abs(d.x), ay = Math.abs(d.y), az = Math.abs(d.z);
+  const f = ax >= ay && ax >= az ? (d.x > 0 ? 0 : 1) : ay >= az ? (d.y > 0 ? 2 : 3) : (d.z > 0 ? 4 : 5);
+  const F = FACES[f], dn = d.dot(F.n);
+  _fp.f = f;
+  _fp.s = Math.atan(d.dot(F.u) / dn) * 4 / Math.PI;
+  _fp.t = Math.atan(d.dot(F.v) / dn) * 4 / Math.PI;
+  return _fp;
 }
 
 // ---------- shared forms + labels ----------
@@ -219,7 +225,7 @@ function makeLander() {
 // ---------- shared sky stars ----------
 const STARS = (() => {
   const rnd = mulberry32(77), n = 1600, p = new Float32Array(n * 3), d = new THREE.Vector3();
-  for (let i = 0; i < n; i++) { randDir(rnd, d).multiplyScalar(4000); p[i * 3] = d.x; p[i * 3 + 1] = d.y; p[i * 3 + 2] = d.z; }
+  for (let i = 0; i < n; i++) { randDir(rnd, d).multiplyScalar(150000); p[i * 3] = d.x; p[i * 3 + 1] = d.y; p[i * 3 + 2] = d.z; }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   const m = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, depthWrite: false });
@@ -237,75 +243,19 @@ const bodyColor = (b, biome) => { const [h, s, l] = b.col[biome]; return new THR
 
 // ---------- build a world ----------
 function genBody(body) {
-  makeCraters(body);
-  const R = body.R, S = body.type === 'planet' ? 128 : 72, S1 = S + 1, NV = S1 * S1;
-  const w = { body, R, S, NV, hasSea: body.type === 'planet', faces: [], items: [], pulses: [] };
+  const R = body.R;
+  const w = { body, R, hasSea: body.type === 'planet', items: [], cells: new Map(), pulses: [], collected: new Set(save.collected[body.id] || []) };
   world = w;
-  const d = new THREE.Vector3();
+  const site = siteOf(body);
+  w.L = site.L; w.siteH = site.h;
 
-  // pass 1: raw heights
-  for (const F of FACES) {
-    const fc = { h: new Float32Array(NV), dir: new Float32Array(NV * 3), col: new Float32Array(NV * 3), bio: new Uint8Array(NV) };
-    for (let j = 0; j <= S; j++) for (let i = 0; i <= S; i++) {
-      const k = j * S1 + i;
-      const a = Math.tan((-1 + 2 * i / S) * Math.PI / 4), b = Math.tan((-1 + 2 * j / S) * Math.PI / 4);
-      d.copy(F.n).addScaledVector(F.u, a).addScaledVector(F.v, b).normalize();
-      fc.dir[k * 3] = d.x; fc.dir[k * 3 + 1] = d.y; fc.dir[k * 3 + 2] = d.z;
-      fc.h[k] = heightAt(body, d);
-    }
-    w.faces.push(fc);
-  }
-
-  // landing site, flattened pad
-  const L = findSite(body, mulberry32(body.seed * 17 + 9));
-  const siteH = Math.max(body.type === 'planet' ? 2 : -99, heightAt(body, L));
-  w.L = L; w.siteH = siteH;
-  for (const fc of w.faces) for (let k = 0; k < NV; k++) {
-    d.set(fc.dir[k * 3], fc.dir[k * 3 + 1], fc.dir[k * 3 + 2]);
-    const dist = Math.acos(clamp(d.dot(L), -1, 1)) * R;
-    if (dist < 30) fc.h[k] = lerp(fc.h[k], siteH, 1 - smooth(12, 28, dist));
-  }
-
-  for (const fc of w.faces) for (let k = 0; k < NV; k++) recolorVertex(w, fc, k);
-
-  // scene
   const scene = new THREE.Scene();
   w.scene = scene;
   w.skyColor = new THREE.Color(body.type === 'planet' ? body.sky : '#000000');
   scene.background = w.skyColor.clone();
-  if (body.type === 'planet') scene.fog = body.dark ? new THREE.Fog(w.skyColor.clone(), 6, 60) : new THREE.Fog(w.skyColor.clone(), 160, 700);
+  if (body.type === 'planet') scene.fog = body.dark ? new THREE.Fog(w.skyColor.clone(), 10, 140) : new THREE.Fog(w.skyColor.clone(), 900, 9000);
 
-  const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 });
-  w.faces.forEach((fc, f) => {
-    const geo = new THREE.BufferGeometry(), pos = new Float32Array(NV * 3);
-    for (let k = 0; k < NV; k++) {
-      const r = R + fc.h[k];
-      pos[k * 3] = fc.dir[k * 3] * r; pos[k * 3 + 1] = fc.dir[k * 3 + 1] * r; pos[k * 3 + 2] = fc.dir[k * 3 + 2] * r;
-    }
-    // winding so triangles face outward
-    const F = FACES[f], e1 = new THREE.Vector3().copy(F.u), e2 = new THREE.Vector3().copy(F.v);
-    const flip = e1.cross(e2).dot(F.n) < 0;
-    const idx = [];
-    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
-      const a = j * S1 + i, b = a + 1, c = a + S1, dd = c + 1;
-      if (flip) idx.push(a, c, b, b, c, dd); else idx.push(a, b, c, b, dd, c);
-    }
-    geo.setIndex(idx);
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(fc.col, 3));
-    const mesh = new THREE.Mesh(geo, terrainMat);
-    mesh.receiveShadow = true;
-    mesh.frustumCulled = false;
-    fc.mesh = mesh;
-    scene.add(mesh);
-  });
-
-  if (w.hasSea) {
-    const [wh, ws, wl] = body.col.liquid;
-    w.sea = new THREE.Mesh(new THREE.SphereGeometry(R, 160, 100),
-      new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(wh / 360, ws / 100, (wl + 8) / 100), transparent: true, opacity: 0.8, roughness: 0.15, metalness: 0.1 }));
-    scene.add(w.sea);
-  }
+  initTerrain(w);
 
   // lights
   w.ambient = new THREE.AmbientLight(0xffffff, body.dark ? 0.08 : 0.35);
@@ -318,20 +268,20 @@ function genBody(body) {
   scene.add(w.ambient, w.sun, w.sun.target, w.lamp, STARS);
 
   // sky: sun disc, moons (from a planet) or the parent planet (from a moon)
-  const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(110, 24, 16), new THREE.MeshBasicMaterial({ color: 0xfff1b0, fog: false }));
-  sunDisc.position.copy(SUN_DIR).multiplyScalar(4200);
+  const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(2600, 24, 16), new THREE.MeshBasicMaterial({ color: 0xfff1b0, fog: false }));
+  sunDisc.position.copy(SUN_DIR).multiplyScalar(90000);
   scene.add(sunDisc);
   const srnd = mulberry32(body.seed + 404), sd = new THREE.Vector3();
   if (body.type === 'planet') {
-    for (const M of body.moons) scene.add(skyBall(bodyColor(M, 'dust'), M.R * 3, randDir(srnd, sd), 2400 + srnd() * 600));
+    for (const M of body.moons) { const dist = 60000 + srnd() * 25000; scene.add(skyBall(bodyColor(M, 'dust'), dist * (0.02 + M.R / 120000), randDir(srnd, sd), dist)); }
   } else {
     const P = body.parent;
-    scene.add(skyBall(bodyColor(P, 'plains'), P.R * 3.2, sd.set(0.35, 0.8, -0.45), 2300));
-    for (const M of P.moons) if (M !== body) scene.add(skyBall(bodyColor(M, 'dust'), M.R * 2, randDir(srnd, sd), 2600));
+    scene.add(skyBall(bodyColor(P, 'plains'), 70000 * 0.11, sd.set(0.35, 0.8, -0.45), 70000));
+    for (const M of P.moons) if (M !== body) scene.add(skyBall(bodyColor(M, 'dust'), 80000 * 0.012, randDir(srnd, sd), 80000));
   }
 
   // lander + pad
-  const lr = R + siteH;
+  const L = w.L, lr = R + w.siteH;
   const lander = makeLander();
   placeOnSurface(lander.group, L, lr);
   const pad = new THREE.Mesh(new THREE.RingGeometry(LANDER_R - 0.25, LANDER_R, 64).rotateX(-Math.PI / 2),
@@ -344,20 +294,49 @@ function genBody(body) {
   w.lander = lander; w.landerPos = L.clone().multiplyScalar(lr); w.landerR = lr;
   scene.add(lander.group, pad, w.landerLabel, w.landerLight);
 
-  spawnSamples(w);
   spawnSpots(w);
   return w;
 }
 
-function spawnSamples(w) {
-  const body = w.body, R = w.R, species = genSpecies(body);
-  const rnd = mulberry32(body.seed * 13 + 5);
-  const collected = new Set(save.collected[body.id] || []);
-  const d = new THREE.Vector3();
-  const tries = Math.round(4 * Math.PI * R * R / 75);
+// ---------- samples stream in by area ("cells") around the player ----------
+const CELL_TARGET = 150, CELL_LOAD = 200, CELL_KEEP = 290, SAMPLE_AREA = 330, ITEM_SHOW = 120;
+const _cd = new THREE.Vector3(), _c1 = new THREE.Vector3(), _c2 = new THREE.Vector3();
+function updateSampleCells(w, maxSpawn = 2) {
+  const n = 1 << (w.cellLevel ??= Math.max(0, Math.round(Math.log2(w.R * Math.PI / 2 / CELL_TARGET))));
+  const up = player.up;
+  tangentOf(up, _c1); _c2.copy(up).cross(_c1);
+  const want = new Map();
+  for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) {
+    _cd.copy(up).multiplyScalar(w.R).addScaledVector(_c1, a * 110).addScaledVector(_c2, b * 110).normalize();
+    const p = faceParam(_cd);
+    const x = clamp(Math.floor((p.s + 1) / 2 * n), 0, n - 1), y = clamp(Math.floor((p.t + 1) / 2 * n), 0, n - 1);
+    const key = `${p.f}.${x}.${y}`;
+    if (!want.has(key)) want.set(key, [p.f, x, y]);
+  }
+  for (const [key, c] of w.cells) if (c.center.distanceTo(player.pos) > CELL_KEEP) unloadCell(w, key, c);
+  let spawned = 0;
+  for (const [key, [f, x, y]] of want) {
+    if (w.cells.has(key)) continue;
+    const size = 2 / n;
+    dirFromParam(FACES[f], -1 + (x + 0.5) * size, -1 + (y + 0.5) * size, _cd);
+    if (_cd.multiplyScalar(w.R).distanceTo(player.pos) > CELL_LOAD + w.R * size * Math.PI / 8) continue;
+    spawnCell(w, key, f, x, y, n);
+    if (++spawned >= maxSpawn) break;
+  }
+}
+
+function spawnCell(w, key, f, x, y, n) {
+  const body = w.body, R = w.R, species = genSpecies(body), size = 2 / n;
+  const a0 = -1 + x * size, b0 = -1 + y * size, arc = R * size * Math.PI / 4;
+  const rnd = mulberry32((body.seed * 73856093) ^ (f * 19349663) ^ (x * 83492791) ^ (y * 2654435761));
+  const cell = { items: [], center: dirFromParam(FACES[f], a0 + size / 2, b0 + size / 2, new THREE.Vector3()).multiplyScalar(R) };
+  const bagIds = new Set(bag.map(i => i.id));
+  const tries = Math.round(arc * arc / SAMPLE_AREA), d = new THREE.Vector3();
   for (let k = 0; k < tries; k++) {
-    randDir(rnd, d);
+    dirFromParam(FACES[f], a0 + rnd() * size, b0 + rnd() * size, d);
     const r = rnd(), sr = rnd(), rot = rnd() * Math.PI * 2;
+    const id = `${key}.${k}`;
+    if (w.collected.has(id) || bagIds.has(id)) continue;
     if (Math.acos(clamp(d.dot(w.L), -1, 1)) * R < 16) continue;
     const h = groundH(d), b = biomeOf(body, h, d);
     let cat = null;
@@ -371,10 +350,9 @@ function spawnSamples(w) {
       else if (b === 1) { if (r < 0.12) cat = 'rock'; }
       else { if (r < 0.14) cat = 'ice'; }
     }
-    if (!cat || collected.has(k)) continue;
+    if (!cat) continue;
     const sp = pickSpecies(sr, species[cat]);
-    const s = sp.size / 12;
-    const dir = d.clone();
+    const s = sp.size / 12, dir = d.clone();
     const gr = R + (cat === 'plant' && w.hasSea ? Math.max(h, 0) : h);
     const mesh = new THREE.Mesh(GEO[cat], speciesMat(sp));
     mesh.scale.setScalar(s);
@@ -382,12 +360,19 @@ function spawnSamples(w) {
     mesh.castShadow = true;
     const label = makeLabel(spName(sp), CATS[cat].tag, 0.55, false);
     label.position.copy(dir).multiplyScalar(gr + LABEL_Y[cat] * s + 0.3);
-    const it = { id: k, cat, sp, dir, pos: dir.clone().multiplyScalar(gr), gr, s, rot, mesh, label, revealed: cat !== 'fossil', ping: 0, taken: false };
+    const it = { id, cell, cat, sp, dir, pos: dir.clone().multiplyScalar(gr), gr, s, rot, mesh, label, revealed: cat !== 'fossil', ping: 0, taken: false };
     mesh.visible = it.revealed;
     label.visible = false;
     w.scene.add(mesh, label);
     w.items.push(it);
+    cell.items.push(it);
   }
+  w.cells.set(key, cell);
+}
+function unloadCell(w, key, cell) {
+  for (const it of cell.items) { w.scene.remove(it.mesh, it.label); it.unloaded = true; }
+  w.items = w.items.filter(i => i.cell !== cell);
+  w.cells.delete(key);
 }
 
 function disposeWorld(w) {

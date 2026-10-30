@@ -4,6 +4,14 @@
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill
 
+### Part 1: much bigger worlds
+- Planets are now 5.2–8 km in radius (about 30–50 km around) and moons 1.1–2.3 km
+- New streaming terrain: each world is a quadtree of chunks; detailed ground (about 1.4 m between points) is only built near you and gets coarser with distance, a few chunks per frame
+- Terrain behind the horizon isn't drawn, and samples beyond 120 m are hidden, to keep it smooth on tablets (about 100 draw calls on screen)
+- Samples now stream in by area around you; mining spots cover the whole world (with three near the lander) and only load when you get close
+- Smooth-shaded ground with bare rock on steep slopes; deeper depth buffer so far-away terrain doesn't flicker
+- Because the worlds changed size, collected samples and placed drills from older saves are reset (RP, unlocks, codex and resources are kept)
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre
