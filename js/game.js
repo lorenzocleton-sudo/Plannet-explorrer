@@ -238,7 +238,11 @@ renderer.domElement.addEventListener('mousedown', e => {
 });
 addEventListener('mouseup', e => { dragging = false; if (e.button === 0) mouseUse = false; if (e.button === 2) mouseAlt = false; });
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
-addEventListener('wheel', e => { if (!menu && Math.abs(e.deltaY) > 2) selectTool(tool + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
+addEventListener('wheel', e => {
+  if (menu || Math.abs(e.deltaY) <= 2) return;
+  if (e.shiftKey && TOOLS[tool].id === 'terraform') setBrush(brushIdx + (e.deltaY > 0 ? -1 : 1));
+  else selectTool(tool + (e.deltaY > 0 ? 1 : -1));
+}, { passive: true });
 addEventListener('mousemove', e => {
   if (menu) return;
   if (document.pointerLockElement || dragging) rotateCam(e.movementX, e.movementY);
@@ -455,5 +459,6 @@ function syncScene() {
     it.label.visible = dist < maxD || (it.ping > 0 && dist < SCAN_R + 5);
   }
   syncMining();
+  syncTerraform();
 }
 const _NIGHT = new THREE.Color('#05060f');

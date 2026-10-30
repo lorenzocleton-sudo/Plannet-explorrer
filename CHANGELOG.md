@@ -28,6 +28,12 @@
 - You own 3 drills: place one on a spot with the Drill tool, it mines over time (even while you're away), then collect the resources; hold to pack the drill back up
 - Resources go in a cargo hold (40 units), are unloaded at the lander for Research Points, and are listed in the codex; dying loses carried cargo
 
+### Stage 5: terraform tool
+- Raise (`E` / left click / RAISE) or lower (`R` / right click / LOWER) the ground where you aim, up to 40 m away; a ring shows the brush
+- Five brush sizes (1.5–9 m): `[` `]`, Shift+wheel, or the BRUSH button on touch
+- Changes are saved per planet/moon and come back when you return; the ground recolours to match its new height (dig below sea level and it floods)
+- Samples, mining spots and drills move with the ground; the landing pad can't be terraformed
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

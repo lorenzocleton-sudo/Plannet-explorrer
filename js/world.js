@@ -90,6 +90,14 @@ function findSite(body, rnd) {
   return best || new THREE.Vector3(0, 1, 0);
 }
 
+const _rc = new THREE.Vector3();
+function recolorVertex(w, fc, k) {
+  _rc.set(fc.dir[k * 3], fc.dir[k * 3 + 1], fc.dir[k * 3 + 2]);
+  const b = fc.bio[k] = biomeOf(w.body, fc.h[k], _rc);
+  const c = colorOf(w.body, b, fc.h[k], _rc);
+  fc.col[k * 3] = c[0]; fc.col[k * 3 + 1] = c[1]; fc.col[k * 3 + 2] = c[2];
+}
+
 // ---------- terrain grid lookups ----------
 const _gc = { f: 0, x: 0, y: 0 };
 function gridCoord(d) {
@@ -256,14 +264,12 @@ function genBody(body) {
     d.set(fc.dir[k * 3], fc.dir[k * 3 + 1], fc.dir[k * 3 + 2]);
     const dist = Math.acos(clamp(d.dot(L), -1, 1)) * R;
     if (dist < 30) fc.h[k] = lerp(fc.h[k], siteH, 1 - smooth(12, 28, dist));
-    const b = fc.bio[k] = biomeOf(body, fc.h[k], d);
-    const c = colorOf(body, b, fc.h[k], d);
-    fc.col[k * 3] = c[0]; fc.col[k * 3 + 1] = c[1]; fc.col[k * 3 + 2] = c[2];
   }
 
-  // saved terraforming
+  // saved terraforming, then colour everything from the final heights
   const terra = save.terra[body.id];
   if (terra) for (const key in terra) { const f = Math.floor(key / NV); w.faces[f].h[key % NV] += terra[key]; }
+  for (const fc of w.faces) for (let k = 0; k < NV; k++) recolorVertex(w, fc, k);
 
   // scene
   const scene = new THREE.Scene();
