@@ -48,6 +48,12 @@
 - Skip at any time with any key, a click/tap on the screen, or the Skip button
 - The atmosphere/gravity banner appears once you've touched down
 
+### Stage 9: debug / admin mode
+- New "Debug / admin mode" toggle in Options → Admin (off by default)
+- While on: infinite oxygen, god mode (no fall or any other damage), instant drilling
+- Fly mode (`F`; `Space` up, `X` down, `Shift` fast), teleport to lander (`T`), and unlock all planets and moons, also available as buttons in Options and the pause menu
+- Touch: TP / FLY / UP / DOWN buttons appear while debug mode is on
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

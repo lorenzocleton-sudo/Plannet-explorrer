@@ -65,6 +65,8 @@ function renderOptions() {
   $('oFps').checked = opts.fps;
   $('oQuality').value = opts.quality;
   $('oShadows').checked = opts.shadows;
+  $('oDebug').checked = opts.debug;
+  if (typeof applyDebug === 'function') applyDebug();
 }
 function optChanged() {
   opts.sens = +$('oSens').value;
@@ -363,6 +365,13 @@ function drawHUD(dt) {
   }
   hx.textAlign = 'left';
 
+  if (debugOn()) {
+    const t = `DEBUG · god mode · ∞ O₂ · instant drills${flying ? ' · FLYING' : ''}`;
+    hx.font = 'bold 12px system-ui,sans-serif'; hx.textBaseline = 'middle';
+    const w = hx.measureText(t).width + 16;
+    hx.fillStyle = 'rgba(255,194,58,.9)'; rr(10, VH - 52, w, 22, 6); hx.fill();
+    hx.fillStyle = '#111'; hx.fillText(t, 18, VH - 41);
+  }
   hx.fillStyle = 'rgba(255,255,255,.45)'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'bottom';
   hx.fillText(`Planet Explorer v${VERSION} · [Esc] Pause · [C] Codex` + (opts.fps ? ` · ${Math.round(fps)} FPS` : ''), 10, VH - 8);
   if (!isTouch && !document.pointerLockElement && !menu) {

@@ -26,6 +26,24 @@ let bag = [], floaters = [];
 let scanT = 0, pickCd = 0, digT = 0, digTarget = null, lowWarned = false, fullWarnT = 0, time = 0;
 let arrival = null; // { t, text, ok }
 let hurtFlash = 0, respawned = false;
+
+// ---------- debug / admin mode ----------
+const FLY_SPEED = 22;
+let flying = false, touchUp = false, touchDown = false;
+const debugOn = () => !!opts.debug;
+function flyStep(dt, move, up) {
+  const vUp = (keys.has(' ') || touchUp ? 1 : 0) - (keys.has('x') || keys.has('control') || touchDown ? 1 : 0);
+  const fs = FLY_SPEED * (keys.has('shift') ? 3 : 1);
+  jumpQueued = false;
+  player.vel.copy(move).multiplyScalar(fs).addScaledVector(up, vUp * fs);
+  player.pos.addScaledVector(player.vel, dt);
+  const nu = _u.copy(player.pos).normalize();
+  const floorR = surfaceR(nu) + (world.hasSea ? -1 : 0);
+  if (player.pos.length() < floorR) player.pos.setLength(floorR);
+  player.inLiquid = false;
+  player.onGround = false;
+  player.fallTop = player.pos.length();
+}
 const SAFE_FALL_ENERGY = 45, FALL_DMG = 0.8, SUFFOCATE_DPS = 12;
 
 // temp vectors
@@ -139,7 +157,7 @@ function die(cause) {
   toast(`${cause} Rescue drone brought you back to the lander.${lost ? ` ${lost} unsaved sample${lost > 1 ? 's' : ''} lost.` : ''}`, 'bad');
 }
 function damage(amount, cause) {
-  if (amount <= 0) return;
+  if (amount <= 0 || debugOn()) return; // god mode
   player.hp -= amount;
   hurtFlash = Math.min(1, hurtFlash + amount / 40);
   if (player.hp <= 0) die(cause);
@@ -298,44 +316,48 @@ function update(dt) {
   const len = move.length();
   if (len > 1) move.divideScalar(len);
 
-  // split velocity into radial (up/down) and tangential parts
-  const spd = WALK_SPEED * B.speed * (player.inLiquid ? 0.55 : 1);
-  let vr = player.vel.dot(up);
-  const vt = _t.copy(player.vel).addScaledVector(up, -vr);
-  vt.lerp(_a.copy(move).multiplyScalar(spd), Math.min(1, B.grip * dt * (player.onGround ? 1 : 0.3)));
-  if (jumpQueued && player.onGround) { vr = JUMP_V; player.onGround = false; }
-  jumpQueued = false;
-  vr -= B.g * dt;
-  player.vel.copy(vt).addScaledVector(up, vr);
-  player.pos.addScaledVector(player.vel, dt);
+  const nu = _u; // player's "up" after moving (set by both branches)
+  if (flying) flyStep(dt, move, up);
+  else {
+    // split velocity into radial (up/down) and tangential parts
+    const spd = WALK_SPEED * B.speed * (player.inLiquid ? 0.55 : 1);
+    let vr = player.vel.dot(up);
+    const vt = _t.copy(player.vel).addScaledVector(up, -vr);
+    vt.lerp(_a.copy(move).multiplyScalar(spd), Math.min(1, B.grip * dt * (player.onGround ? 1 : 0.3)));
+    if (jumpQueued && player.onGround) { vr = JUMP_V; player.onGround = false; }
+    jumpQueued = false;
+    vr -= B.g * dt;
+    player.vel.copy(vt).addScaledVector(up, vr);
+    player.pos.addScaledVector(player.vel, dt);
 
-  // ground contact (gravity always points to the centre)
-  const nu = _u.copy(player.pos).normalize();
-  const gh = groundH(nu);
-  const floorR = world.hasSea ? Math.max(R + gh, R - 1.0) : R + gh;
-  player.inLiquid = world.hasSea && gh < -0.3;
-  const r0 = player.pos.length();
-  if (r0 <= floorR || (player.onGround && r0 - floorR < 0.6 && vr <= 0.5)) {
-    if (!player.onGround) {
-      respawned = false;
-      onLanded(player.fallTop - floorR);
-      if (respawned) return;
+    // ground contact (gravity always points to the centre)
+    nu.copy(player.pos).normalize();
+    const gh = groundH(nu);
+    const floorR = world.hasSea ? Math.max(R + gh, R - 1.0) : R + gh;
+    player.inLiquid = world.hasSea && gh < -0.3;
+    const r0 = player.pos.length();
+    if (r0 <= floorR || (player.onGround && r0 - floorR < 0.6 && vr <= 0.5)) {
+      if (!player.onGround) {
+        respawned = false;
+        onLanded(player.fallTop - floorR);
+        if (respawned) return;
+      }
+      player.pos.copy(nu).multiplyScalar(floorR);
+      const vrn = player.vel.dot(nu);
+      if (vrn < 0) player.vel.addScaledVector(nu, -vrn);
+      player.onGround = true;
+      player.fallTop = floorR;
+    } else {
+      player.onGround = false;
+      player.fallTop = Math.max(player.fallTop, r0);
     }
-    player.pos.copy(nu).multiplyScalar(floorR);
-    const vrn = player.vel.dot(nu);
-    if (vrn < 0) player.vel.addScaledVector(nu, -vrn);
-    player.onGround = true;
-    player.fallTop = floorR;
-  } else {
-    player.onGround = false;
-    player.fallTop = Math.max(player.fallTop, r0);
   }
 
   if (len > 0.1) player.face.lerp(_a.copy(move).normalize(), Math.min(1, 12 * dt));
   player.face.addScaledVector(nu, -player.face.dot(nu));
   if (player.face.lengthSq() < 1e-6) player.face.copy(player.fwd);
   player.face.normalize();
-  player.walk += vt.length() * dt * 0.9;
+  player.walk += flying ? 0 : _t.length() * dt * 0.9; // _t = tangential velocity from the walk step
 
   // oxygen & lander
   if (atLander()) {
@@ -344,8 +366,8 @@ function update(dt) {
     if (player.o2 > 30) lowWarned = false;
     if (bag.length) deposit();
     if (cargoCount()) unloadCargo();
-  } else if (B.breathable && !player.inLiquid) {
-    player.o2 = Math.min(100, player.o2 + 10 * dt);
+  } else if (debugOn() || (B.breathable && !player.inLiquid)) {
+    player.o2 = debugOn() ? 100 : Math.min(100, player.o2 + 10 * dt); // infinite O2 in debug mode
   } else {
     player.o2 -= B.o2 * (player.inLiquid && !B.breathable ? 2.5 : 1) * dt;
     if (player.o2 < 25 && !lowWarned) { lowWarned = true; toast('Oxygen low! Head back to the lander.', 'bad'); }
@@ -410,7 +432,7 @@ function update(dt) {
 // fall damage scales with fall height AND local gravity (impact energy per kg = g·h),
 // so the same drop hurts far less on a low-gravity moon. Liquid breaks the fall.
 function onLanded(fallHeight) {
-  if (player.inLiquid || fallHeight <= 0) return;
+  if (player.inLiquid || fallHeight <= 0 || debugOn()) return;
   const energy = world.body.g * fallHeight;
   const dmg = Math.round(Math.max(0, energy - SAFE_FALL_ENERGY) * FALL_DMG);
   if (dmg > 0) {
