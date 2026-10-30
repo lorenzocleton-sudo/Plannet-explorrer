@@ -1,6 +1,13 @@
 # Changelog
 
 ## v0.6 (prompt 6: visual overhaul)
+### Part 2 (steps 4–5)
+- **Textured ground**: the ground uses CC0 photo textures with relief (normal maps): grass, dirt, sand, rock, gravel, snow, moon dust, ice and alien ground. They blend by biome, height (sand at the shore, gravel on the sea floor, snow up high and in the cold) and slope (bare rock on steep ground). Each planet keeps its own colours, and texture detail fades out with distance so it stays smooth and cheap
+- **Nature**: grass that moves in the wind, bushes, broadleaf and conifer trees, swamp palms, bare trees, cacti, dry shrubs, alien bulbs, tube corals and giant glowing mushrooms, and rocks of every size up to boulders and slabs. Ruska, Umbros and Xeno Prime also have tall rock pillars and natural arches. What grows where depends on the biome. Everything is drawn instanced, with simpler models far away, and grows in smoothly at the edge of the view instead of popping
+- Trunks, boulders and pillars are solid; nothing grows on the landing pad, mining spots or your buildings
+- **Astronaut**: the player is now an animated astronaut (CC0, Quaternius) that idles, walks, runs and jumps
+- Samples are real shapes now: leafy plants with a flower bulb, rounded rocks, crystal clusters, coiled fossil shells, dust mounds and ice chunks. The lander has a rounded hull, an engine bell and foot pads
+
 ### Part 1 (steps 1–3)
 - **Admin tab**: all admin buttons are off the screen. With debug mode on (Options), the pause menu gets an Admin tab: fly mode, teleport to lander, infinite O₂, god mode, fast machines / free travel, unlock all. On touch, while flying JUMP goes up and INTERACT goes down
 - **Assets**: CC0 ground textures (ambientCG via the jMonkeyEngine repo), a CC0 animated astronaut (Quaternius) and the three.js glTF loader are now in the repo; sand, dust and ice textures are generated. Sources and licences are listed in CREDITS.md

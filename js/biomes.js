@@ -23,8 +23,8 @@ const PLANET_BIOMES = {
     grassland: [98, 42, 38], forest: [120, 38, 25], desert: [40, 45, 60], highlands: [30, 12, 40], tundra: [195, 10, 82], swamp: [82, 30, 26] } },
   Ruska: { tBias: 0.25, mBias: -0.2, list: {
     desert: [18, 55, 44], highlands: [10, 32, 30], grassland: [30, 40, 36], alien: [42, 70, 48] } },
-  Glacia: { tBias: -0.45, mBias: 0, list: {
-    tundra: [200, 22, 85], highlands: [212, 12, 52], forest: [175, 18, 32], swamp: [190, 30, 58] } },
+  Glacia: { tBias: -0.6, mBias: 0, list: {
+    tundra: [200, 22, 86], highlands: [212, 12, 55], forest: [190, 14, 62], swamp: [192, 28, 66] } },
   Umbros: { tBias: -0.3, mBias: 0.1, list: {
     highlands: [250, 10, 24], tundra: [240, 12, 40], alien: [295, 55, 30], swamp: [270, 25, 18] } },
   'Xeno Prime': { tBias: 0.15, mBias: 0.25, list: {
@@ -88,7 +88,7 @@ function swampiness(body, x, y, z, c) {
 }
 
 // ground colour of a planet at direction d (step 4 adds textures on top of this tint)
-const _gc = [0, 0, 0];
+const _gc = [0, 0, 0], _gf = { beach: 0, rock: 0, snow: 0, frost: 0 };
 function planetGroundColor(body, d, h, slope) {
   const S = biomeSet(body), R = body.R;
   biomeWeights(body, d, h, slope);
@@ -108,12 +108,18 @@ function planetGroundColor(body, d, h, slope) {
   const C = body.col, mix = (a, b, t) => { a[0] = lerpHue(a[0], b[0], t); a[1] = lerp(a[1], b[1], t); a[2] = lerp(a[2], b[2], t); };
   // wet sand along the shore, darker sea floor further out
   const beach = C.beach || [40, 30, 55];
-  mix(col, beach, smooth(1.1, 0.25, h) * (1 - _bw[B_SWAMP]));
+  _gf.beach = smooth(1.1, 0.25, h) * (1 - _bw[B_SWAMP]);
+  mix(col, beach, _gf.beach);
   if (h < 0) mix(col, [beach[0], beach[1] * 0.8, beach[2] * 0.62], smooth(0, -18, h));
   // bare rock on steep slopes, snow where it is cold and flat enough to settle
-  mix(col, S.has[B_HIGH] ? S.col[B_HIGH] : C.rocky, smooth(0.86, 0.66, slope) * smooth(0.5, 3, h));
+  _gf.rock = smooth(0.86, 0.66, slope) * smooth(0.5, 3, h);
+  mix(col, S.has[B_HIGH] ? S.col[B_HIGH] : C.rocky, _gf.rock);
   const snow = C.snow || [205, 18, 92];
-  mix(col, snow, smooth(0.08, -0.06, _clim.t) * smooth(0.55, 0.8, slope) * smooth(1, 6, h));
+  _gf.snow = smooth(0.14, -0.04, _clim.t) * smooth(0.55, 0.8, slope) * smooth(0.2, 1.5, h);
+  mix(col, snow, _gf.snow);
+  // frost: a thin white cover where it's cold but not cold enough for full snow
+  _gf.frost = smooth(0.34, 0.14, _clim.t) * smooth(0.2, 1.5, h) * 0.55;
+  mix(col, snow, _gf.frost * 0.6);
   return hsl2rgbTo(col[0], col[1], col[2], _gc);
 }
 function lerpHue(a, b, t) { let d = ((b - a) % 360 + 540) % 360 - 180; return a + d * t; }

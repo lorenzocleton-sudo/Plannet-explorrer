@@ -201,14 +201,14 @@ const GEO = {
   dust: new THREE.SphereGeometry(0.6, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.5, 1),
   ice: new THREE.IcosahedronGeometry(0.55, 0).translate(0, 0.45, 0),
 };
-const LABEL_Y = { plant: 2.1, rock: 1.3, mineral: 2.6, fossil: 0.9, dust: 0.9, ice: 1.4 };
+const LABEL_Y = { plant: 2.2, rock: 1.3, mineral: 2.6, fossil: 0.9, dust: 0.9, ice: 1.6 };
 const sharedGeos = new Set(Object.values(GEO));
 const sharedMats = new Set();
 const matCache = {};
 function speciesMat(sp) {
   if (matCache[sp.id]) return matCache[sp.id];
   const c = new THREE.Color(sp.color), shiny = sp.cat === 'mineral' || sp.cat === 'ice';
-  const m = new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: shiny ? 0.3 : 0.85, metalness: sp.cat === 'mineral' ? 0.2 : 0 });
+  const m = new THREE.MeshStandardMaterial({ color: c, vertexColors: true, flatShading: sp.cat === 'mineral', roughness: shiny ? 0.3 : 0.85, metalness: sp.cat === 'mineral' ? 0.2 : 0, side: sp.cat === 'plant' ? THREE.DoubleSide : THREE.FrontSide });
   if (sp.cat === 'mineral') { m.emissive = c.clone(); m.emissiveIntensity = 0.45; }
   if (sp.cat === 'ice') { m.transparent = true; m.opacity = 0.85; }
   sharedMats.add(m);
@@ -289,23 +289,33 @@ function placeOnSurface(obj, up, r, spin = 0) {
 // ---------- lander ----------
 function makeLander() {
   const g = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({ color: 0xd7dce8, flatShading: true, roughness: 0.5, metalness: 0.3 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 3.4, 6), metal);
-  body.position.y = 3.2;
-  const win = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 8), new THREE.MeshStandardMaterial({ color: 0x3aa0ff, emissive: 0x1a60aa, emissiveIntensity: 0.6 }));
-  win.position.set(0, 3.4, 2.4);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff4040 }));
-  beacon.position.y = 5.3;
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(1.6, 5, 10).rotateX(Math.PI).translate(0, -1.2, 0),
+  const metal = new THREE.MeshStandardMaterial({ color: 0xd7dce8, roughness: 0.42, metalness: 0.35 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x5a6070, roughness: 0.5, metalness: 0.5 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xc9a24a, roughness: 0.35, metalness: 0.6 });
+  // rounded hull: a lathe profile instead of a six-sided box
+  const prof = [[0, 1.4], [2.6, 1.5], [3.05, 2.0], [2.9, 3.6], [2.3, 4.6], [1.2, 5.2], [0, 5.35]].map(([x, y]) => new THREE.Vector2(x, y));
+  const body = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), metal);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(3.08, 3.08, 0.35, 32, 1, true), gold);
+  band.position.y = 2.6;
+  const win = new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14), new THREE.MeshStandardMaterial({ color: 0x3aa0ff, emissive: 0x1a60aa, emissiveIntensity: 0.6, roughness: 0.15 }));
+  win.position.set(0, 3.7, 2.35);
+  win.scale.z = 0.5;
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.3, 1.2, 24, 1, true), dark);
+  nozzle.position.y = 0.9;
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff4040 }));
+  beacon.position.y = 5.55;
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(1.3, 5, 16).rotateX(Math.PI).translate(0, -2.1, 0),
     new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85 }));
   flame.visible = false;
-  g.add(body, win, beacon, flame);
+  g.add(body, band, win, nozzle, beacon, flame);
   for (let i = 0; i < 4; i++) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3.2), metal);
-    const a = i * Math.PI / 2 + Math.PI / 4;
-    leg.position.set(Math.cos(a) * 3, 1.2, Math.sin(a) * 3);
-    leg.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45);
-    g.add(leg);
+    const a = i * Math.PI / 2 + Math.PI / 4, cx = Math.cos(a), cz = Math.sin(a);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 3.3, 10), metal);
+    leg.position.set(cx * 3.15, 1.25, cz * 3.15);
+    leg.rotation.set(-Math.sin(a) * 0.42, 0, Math.cos(a) * 0.42); // feet splay outwards
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.14, 16), dark);
+    pad.position.set(cx * 3.85, 0.07, cz * 3.85);
+    g.add(leg, pad);
   }
   g.traverse(o => { o.castShadow = true; });
   return { group: g, beacon, flame };
@@ -398,6 +408,7 @@ function genBody(body) {
 
   spawnSpots(w);
   loadBase(w);
+  initScenery(w);
   return w;
 }
 
@@ -497,4 +508,5 @@ function disposeWorld(w) {
     if (o.userData && o.userData.dyn) o.userData.dyn.tex.dispose();
   });
   if (w.sun.shadow.map) w.sun.shadow.map.dispose();
+  disposeScenery();
 }

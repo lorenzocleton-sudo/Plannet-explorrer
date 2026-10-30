@@ -18,7 +18,7 @@ function initTerrain(w) {
   const D = detail();
   const maxLevel = Math.max(3, Math.ceil(Math.log2(R * Math.PI / 2 / (CH_N * D.leaf))));
   // lit per pixel with smooth normals, so the ground never looks faceted
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0 });
+  const mat = makeGroundMaterial();
   const seaMat = w.hasSea ? makeWaterMaterial(w.body) : null;
   const group = new THREE.Group();
   w.scene.add(group);
@@ -47,6 +47,7 @@ function buildChunk(w, node) {
   const P = (k, o) => { const r = R + H[k]; o.set(D[k * 3] * r, D[k * 3 + 1] * r, D[k * 3 + 2] * r); return o; };
   const NV = (N + 1) * (N + 1), NS = 4 * N;
   const pos = new Float32Array((NV + NS) * 3), nor = new Float32Array((NV + NS) * 3), col = new Float32Array((NV + NS) * 3);
+  const W = [0, 1, 2].map(() => new Float32Array((NV + NS) * 3));
   const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), e = new THREE.Vector3(), n = new THREE.Vector3(), dv = new THREE.Vector3();
   let minH = Infinity, maxH = -Infinity;
   for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
@@ -62,7 +63,11 @@ function buildChunk(w, node) {
     nor[v * 3] = n.x; nor[v * 3 + 1] = n.y; nor[v * 3 + 2] = n.z;
     const h = H[k];
     minH = Math.min(minH, h); maxH = Math.max(maxH, h);
-    const sl = n.dot(dv), cl = body.type === 'planet' ? planetGroundColor(body, dv, h, sl) : colorOf(body, biomeOf(body, h, dv), h, dv, sl);
+    const sl = n.dot(dv);
+    let cl, lw;
+    if (body.type === 'planet') { cl = planetGroundColor(body, dv, h, sl); lw = planetLayers(body, h, sl, _gf); }
+    else { const b = biomeOf(body, h, dv); cl = colorOf(body, b, h, dv, sl); lw = moonLayers(body, dv, b, h, sl); }
+    for (let q = 0; q < 9; q++) W[q / 3 | 0][v * 3 + q % 3] = lw[q];
     col[v * 3] = cl[0]; col[v * 3 + 1] = cl[1]; col[v * 3 + 2] = cl[2];
   }
   // skirts hide cracks where a detailed chunk meets a coarser neighbour
@@ -78,7 +83,7 @@ function buildChunk(w, node) {
     const l = a.length();
     a.multiplyScalar((l - skirt) / l);
     pos[o * 3] = a.x; pos[o * 3 + 1] = a.y; pos[o * 3 + 2] = a.z;
-    for (let q = 0; q < 3; q++) { nor[o * 3 + q] = nor[v * 3 + q]; col[o * 3 + q] = col[v * 3 + q]; }
+    for (let q = 0; q < 3; q++) { nor[o * 3 + q] = nor[v * 3 + q]; col[o * 3 + q] = col[v * 3 + q]; for (const A of W) A[o * 3 + q] = A[v * 3 + q]; }
   });
   const idx = [], flip = FACE_FLIP[node.f];
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
@@ -99,6 +104,7 @@ function buildChunk(w, node) {
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  W.forEach((A, q) => geo.setAttribute('aW' + q, new THREE.BufferAttribute(A, 3)));
   geo.computeBoundingSphere();
   const mesh = new THREE.Mesh(geo, w.terrain.mat);
   mesh.receiveShadow = true;

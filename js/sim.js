@@ -23,7 +23,7 @@ const LANDER_POWER = 3, O2_PER_ICE = 60, O2_CAP = 300, O2_RATE = 15, FUEL_TIME =
 const fabName = r => r.name || itemName(r.id);
 
 let factoryDirty = true, simAcc = 0, labelAcc = 0, autosaveT = 10;
-function factoryChanged() { factoryDirty = true; }
+function factoryChanged() { factoryDirty = true; if (typeof SCN !== 'undefined') SCN.dirty = true; }
 
 // the lander is a power source and a storage hub too
 function landerNode(w) { return { type: 'lander', pos: w.landerPos, reach: LANDER_LINK, def: { gen: LANDER_POWER }, store: { inv: landerInv(), cap: LANDER_CAP } }; }

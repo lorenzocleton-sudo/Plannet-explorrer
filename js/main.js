@@ -49,6 +49,8 @@ function showFatal(err, starting = false) {
   document.body.appendChild(d);
 }
 resize();
+loadGroundTextures(detail().texSize);
+loadAstronaut();
 requestAnimationFrame(frame); // start the loop first so menus and HUD work even if landing fails
 try { land(save.current, true); arrival = null; }
 catch (err) { showFatal(err, true); }

@@ -90,6 +90,7 @@ function land(bodyId, resumed = false) {
   // build the detailed terrain and samples around the landing site before the first frame
   syncScene();
   warmTerrain(world, camera.position);
+  updateScenery(world, 300); // plants and rocks around the landing site before the first frame
   updateSampleCells(world, 99);
   if (typeof radarT !== 'undefined') radarT = 0;
   // machines here kept working while you were away (the lander was only here if you just reloaded)
@@ -398,6 +399,7 @@ function update(dt) {
       if (vrn < 0) player.vel.addScaledVector(nu, -vrn);
       player.onGround = true;
       player.fallTop = floorR;
+      collideScenery(player.pos, nu);
     } else {
       player.onGround = false;
       player.fallTop = Math.max(player.fallTop, r0);
@@ -523,12 +525,13 @@ function onLanded(fallHeight) {
 // ---------- sync 3D scene with game state ----------
 function syncScene() {
   const up = player.up, B = world.body;
-  const bob = player.onGround ? Math.abs(Math.sin(player.walk)) * 0.08 : 0;
+  const bob = player.onGround && !ASTRO.ready ? Math.abs(Math.sin(player.walk)) * 0.08 : 0;
   playerMesh.position.copy(player.pos).addScaledVector(up, bob);
   _mat.makeBasis(_a.copy(up).cross(player.face), up, player.face);
   playerMesh.quaternion.setFromRotationMatrix(_mat);
   playerLabel.position.copy(player.pos).addScaledVector(up, 2.3);
   playerLabel.visible = opts.labels !== 'off';
+  updateAstronaut();
 
   // third-person camera orbiting behind the heading
   const head = _b.copy(player.pos).addScaledVector(up, 1.6);
@@ -565,5 +568,6 @@ function syncScene() {
   syncMining();
   syncFactory(1 / 60);
   updateTerrain(world, camera.position);
+  updateScenery(world);
   if ((cellT -= 1 / 60) <= 0) { cellT = 0.25; updateSampleCells(world); }
 }

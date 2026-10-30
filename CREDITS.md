@@ -13,7 +13,7 @@ Every asset in this repository is either CC0 / public domain, MIT-licensed code,
 
 | File | Original | Author | Source | Licence |
 |---|---|---|---|---|
-| `assets/models/astronaut.glb` | "Astronaut" (with Idle, Walk, Run, Jump and other animations) | [Quaternius](https://quaternius.com/) | GitHub: [danvanderboom/Aetherium](https://github.com/danvanderboom/Aetherium) `samples/unity/Aphelion/Assets/ThirdParty/Quaternius/reclaimer-astronaut.glb` (commit `5763cd5`), originally from [poly.pizza/m/OgeSH89Nmx](https://poly.pizza/m/OgeSH89Nmx) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `assets/models/astronaut.glb` | "Astronaut" (character "Barbara the Bee", with Idle, Walk, Run, Jump and other animations; the pistol it carries is hidden in game) | [Quaternius](https://quaternius.com/) | GitHub: [danvanderboom/Aetherium](https://github.com/danvanderboom/Aetherium) `samples/unity/Aphelion/Assets/ThirdParty/Quaternius/reclaimer-astronaut.glb` (commit `5763cd5`), originally from [poly.pizza/m/OgeSH89Nmx](https://poly.pizza/m/OgeSH89Nmx) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 ## Ground textures
 
