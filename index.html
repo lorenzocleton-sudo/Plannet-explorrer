@@ -53,15 +53,24 @@
   #touch .r{display:flex;gap:10px}
   #touch button{width:70px;height:70px;border-radius:50%;padding:0;font-size:13px;font-weight:700;background:rgba(43,75,209,.75)}
   #touch button.sm{width:52px;height:52px;font-size:11px;background:rgba(40,48,90,.8)}
+  #hotbar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
+  #hotbar .slot{position:relative;width:64px;height:60px;padding:0;border-radius:10px;background:rgba(10,13,30,.78);border:2px solid #2b3566;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  #hotbar .slot.sel{border-color:#9fd8ff;background:rgba(43,75,209,.55)}
+  #hotbar .num{position:absolute;top:2px;left:5px;font-size:10px;color:#8f9bc8}
+  #hotbar .ico{font-size:22px;line-height:1}
+  #hotbar .nm{font-size:10px;color:#c3cbef}
+  @media (max-width:760px){body.touch #hotbar{left:8px;bottom:auto;top:34%;transform:none;flex-direction:column}}
   @media (max-width:600px){#toasts{width:calc(100% - 24px);top:auto;bottom:200px}}
 </style>
 </head>
 <body>
 <canvas id="hud"></canvas>
 <div id="toasts"></div>
+<div id="hotbar"></div>
 
 <div id="touch">
   <div class="r"><button class="sm" id="tPause">II</button><button class="sm" id="tCodex">CODEX</button><button class="sm" id="tMap">MAP</button></div>
+  <div class="r"><button class="sm" id="tBrush">BRUSH</button><button id="tAlt">LOWER</button></div>
   <div class="r"><button id="tJump">JUMP</button><button id="tScan">SCAN</button><button id="tAct">GRAB</button></div>
 </div>
 
@@ -74,8 +83,9 @@
       <li><kbd>WASD</kbd> / <kbd>Arrows</kbd> move</li>
       <li><kbd>Mouse</kbd> look (click to capture)</li>
       <li><kbd>Space</kbd> jump</li>
-      <li><kbd>E</kbd> collect (hold to dig)</li>
-      <li><kbd>Q</kbd> scanner pulse</li>
+      <li><kbd>1</kbd>–<kbd>4</kbd> / <kbd>Wheel</kbd> switch tool</li>
+      <li><kbd>E</kbd> / <kbd>Left click</kbd> use tool</li>
+      <li><kbd>Q</kbd> quick scanner pulse</li>
       <li><kbd>C</kbd> research codex</li>
       <li><kbd>M</kbd> star map (at lander)</li>
       <li><kbd>Esc</kbd> / <kbd>P</kbd> pause</li>

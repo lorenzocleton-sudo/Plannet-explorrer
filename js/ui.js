@@ -8,7 +8,7 @@ let menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause 
 function showMenu(name, back = null) {
   for (const k in menus) menus[k].classList.toggle('show', k === name);
   menu = name; menuBack = back;
-  keys.clear(); touchAct = false;
+  keys.clear(); touchAct = touchAlt = mouseUse = mouseAlt = false;
   if (name === 'pause') renderPause();
   if (name === 'options') renderOptions();
   if (name === 'codex') renderCodex();
@@ -178,16 +178,36 @@ function travel(id) {
   resume();
 }
 
+// ---------- hotbar ----------
+const hotbar = $('hotbar');
+TOOLS.forEach((T, i) => {
+  const b = document.createElement('button');
+  b.className = 'slot';
+  b.innerHTML = `<span class="num">${i + 1}</span><span class="ico">${T.icon}</span><span class="nm">${T.name}</span>`;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!menu) selectTool(i); });
+  hotbar.appendChild(b);
+});
+function renderHotbar() {
+  [...hotbar.children].forEach((b, i) => b.classList.toggle('sel', i === tool));
+  $('tAct').textContent = { scanner: 'SCAN', collector: 'GRAB', drill: 'DRILL', terraform: 'RAISE' }[TOOLS[tool].id];
+  $('tAlt').style.display = TOOLS[tool].id === 'terraform' ? '' : 'none';
+  $('tBrush').style.display = TOOLS[tool].id === 'terraform' ? '' : 'none';
+}
+renderHotbar();
+
 // ---------- touch buttons ----------
 const tAct = $('tAct');
 tAct.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAct.addEventListener(ev, () => { touchAct = false; }));
+const tAlt = $('tAlt');
+tAlt.addEventListener('pointerdown', e => { touchAlt = true; e.preventDefault(); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAlt.addEventListener(ev, () => { touchAlt = false; }));
 $('tScan').addEventListener('pointerdown', e => { doScan(); e.preventDefault(); });
 $('tJump').addEventListener('pointerdown', e => { jumpQueued = true; e.preventDefault(); });
 $('tCodex').addEventListener('click', () => { if (!menu) showMenu('codex'); });
 $('tMap').addEventListener('click', () => { if (!menu) openStarMap(); });
 $('tPause').addEventListener('click', () => { if (!menu) showMenu('pause'); });
-if (isTouch) $('touch').classList.add('show');
+if (isTouch) { $('touch').classList.add('show'); document.body.classList.add('touch'); }
 
 // ---------- HUD ----------
 function rr(x, y, w, h, r) {
@@ -236,6 +256,9 @@ function radarPoint(p, cx, cy, rad) {
   if (d > RADAR_RANGE) return null;
   return [cx + x / RADAR_RANGE * rad, cy + y / RADAR_RANGE * rad];
 }
+
+// stage hooks: tools can override the bottom prompt
+function toolPrompt() { return ''; }
 
 let fps = 60;
 function drawHUD(dt) {
@@ -313,12 +336,14 @@ function drawHUD(dt) {
   const near = nearestItem();
   let prompt = '';
   if (atLander()) prompt = 'Lander: samples analyzed, O₂ refilling · [M] Star map';
-  else if (near) prompt = near.cat === 'fossil' ? `Hold [E] to excavate ${spName(near.sp)}` : `[E] Collect ${spName(near.sp)}`;
+  else if (toolPrompt()) prompt = toolPrompt();
+  else if (near && TOOLS[tool].id === 'collector') prompt = near.cat === 'fossil' ? `Hold [E] to excavate ${spName(near.sp)}` : `[E] Collect ${spName(near.sp)}`;
+  else if (near) prompt = `Switch to Collector [2] to pick up ${spName(near.sp)}`;
   if (prompt) {
     hx.font = '15px system-ui,sans-serif';
     const w = hx.measureText(prompt).width + 28;
-    hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 70, w, 34, 10); hx.fill();
-    hx.fillStyle = '#fff'; hx.fillText(prompt, VW / 2, VH - 53);
+    hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 124, w, 34, 10); hx.fill();
+    hx.fillStyle = '#fff'; hx.fillText(prompt, VW / 2, VH - 107);
   }
   if (digTarget) {
     const p = toScreen(_v.copy(digTarget.pos).addScaledVector(digTarget.dir, 1.2));
@@ -345,7 +370,7 @@ function drawHUD(dt) {
   hx.fillText(`Planet Explorer v${VERSION} · [Esc] Pause · [C] Codex` + (opts.fps ? ` · ${Math.round(fps)} FPS` : ''), 10, VH - 8);
   if (!isTouch && !document.pointerLockElement && !menu) {
     hx.textAlign = 'center'; hx.textBaseline = 'middle'; hx.font = '13px system-ui,sans-serif';
-    hx.fillStyle = 'rgba(255,255,255,.6)'; hx.fillText('Click to capture the mouse for camera control', VW / 2, VH - 100);
+    hx.fillStyle = 'rgba(255,255,255,.6)'; hx.fillText('Click to capture the mouse for camera control', VW / 2, VH - 150);
     hx.textAlign = 'left';
   }
 

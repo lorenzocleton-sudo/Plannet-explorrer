@@ -16,6 +16,12 @@
 - Running out of oxygen now hurts you instead of instantly knocking you out
 - At 0 health you respawn at the lander and lose the unsaved samples you were carrying
 
+### Stage 3: tool hotbar
+- Hotbar with four tools: Scanner, Collector, Drill, Terraform Tool
+- Switch with `1`–`4` or the mouse wheel; use the tool with `E` or left click (`Q` still fires a quick scan)
+- Touch: tap the hotbar slots; the big action button changes to match the tool (SCAN / GRAB / DRILL / RAISE)
+- Samples can only be picked up with the Collector (the prompt tells you to switch)
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

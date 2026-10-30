@@ -176,7 +176,24 @@ function fossilSignal() {
 const keys = new Set();
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, active: false };
 const look = { id: null, x: 0, y: 0 };
-let touchAct = false, jumpQueued = false;
+let touchAct = false, touchAlt = false, mouseUse = false, mouseAlt = false, actPrev = false, jumpQueued = false;
+
+// ---------- tool hotbar ----------
+const TOOLS = [
+  { id: 'scanner', name: 'Scanner', icon: '📡', hint: 'Pulse to reveal buried fossils and nearby samples' },
+  { id: 'collector', name: 'Collector', icon: '🧺', hint: 'Pick up samples (hold to dig up fossils)' },
+  { id: 'drill', name: 'Drill', icon: '⛏️', hint: 'Place a drill on a mining spot, collect its resources later' },
+  { id: 'terraform', name: 'Terraform', icon: '⛰️', hint: 'Raise or lower the ground where you aim' },
+];
+let tool = 1;
+function selectTool(i) {
+  tool = (i + TOOLS.length) % TOOLS.length;
+  digT = 0; digTarget = null;
+  renderHotbar();
+}
+// filled in by later stages
+function useDrill(act, pressed, dt) {}
+function useTerraform(raise, lower, dt) {}
 
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
@@ -194,11 +211,12 @@ addEventListener('keydown', e => {
     if (k === 'c') showMenu('codex');
     if (k === 'm') openStarMap();
     if (k === ' ') jumpQueued = true;
+    if (k >= '1' && k <= '4') selectTool(+k - 1);
   }
   keys.add(k);
 });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-addEventListener('blur', () => { keys.clear(); touchAct = false; joy.active = false; if (menu === null) showMenu('pause'); });
+addEventListener('blur', () => { keys.clear(); touchAct = touchAlt = mouseUse = mouseAlt = false; joy.active = false; if (menu === null) showMenu('pause'); });
 
 function rotateCam(dx, dy) {
   const s = 0.0028 * opts.sens;
@@ -212,12 +230,15 @@ document.addEventListener('pointerlockchange', () => {
   }
 });
 let dragging = false;
-renderer.domElement.addEventListener('mousedown', () => {
+renderer.domElement.addEventListener('mousedown', e => {
   if (menu) return;
-  if (!document.pointerLockElement) lockPointer();
-  dragging = true;
+  if (!document.pointerLockElement) { lockPointer(); dragging = true; return; }
+  if (e.button === 0) mouseUse = true;
+  if (e.button === 2) mouseAlt = true;
 });
-addEventListener('mouseup', () => { dragging = false; });
+addEventListener('mouseup', e => { dragging = false; if (e.button === 0) mouseUse = false; if (e.button === 2) mouseAlt = false; });
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('wheel', e => { if (!menu && Math.abs(e.deltaY) > 2) selectTool(tool + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
 addEventListener('mousemove', e => {
   if (menu) return;
   if (document.pointerLockElement || dragging) rotateCam(e.movementX, e.movementY);
@@ -321,12 +342,18 @@ function update(dt) {
     if (player.o2 <= 0) { player.o2 = 0; damage(SUFFOCATE_DPS * dt, 'You suffocated!'); }
   }
 
-  // collecting / digging
+  // tools
   scanT = Math.max(0, scanT - dt);
   pickCd -= dt; fullWarnT -= dt;
-  const act = keys.has('e') || touchAct;
+  const act = keys.has('e') || mouseUse || touchAct;
+  const pressed = act && !actPrev;
+  actPrev = act;
+  const tid = TOOLS[tool].id;
+  if (tid === 'scanner' && pressed) doScan();
+  if (tid === 'drill') useDrill(act, pressed, dt);
+  if (tid === 'terraform') useTerraform(act, keys.has('r') || mouseAlt || touchAlt, dt);
   const near = nearestItem();
-  if (near && act) {
+  if (near && act && tid === 'collector') {
     if (near.cat === 'fossil') {
       if (digTarget !== near) { digTarget = near; digT = 0; }
       digT += dt;
