@@ -259,7 +259,8 @@ function drawHUD(dt) {
   hx.fillStyle = '#ffd166'; hx.font = '13px system-ui,sans-serif'; hx.textAlign = 'right';
   hx.fillText(save.rp + ' RP', 220, 20); hx.textAlign = 'left';
   hx.fillStyle = B.breathable ? '#8ef0a0' : '#ff9d9d'; hx.font = '11px system-ui,sans-serif';
-  hx.fillText((B.breathable ? 'Breathable air' : 'No oxygen') + ` · g ${B.g.toFixed(1)} m/s²`, 20, 38);
+  const lt = localTime(world, player.up), hh = Math.floor(lt), mm = Math.floor((lt - hh) * 60);
+  hx.fillText((B.breathable ? 'Breathable air' : 'No oxygen') + ` · g ${B.g.toFixed(1)} m/s² · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, 20, 38);
   const hpc = player.hp < 30 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#e8566b';
   bar(20, 56, 200, 16, player.hp / 100, hpc, `Health ${Math.ceil(player.hp)}`);
   const o2c = player.o2 < 25 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#3ad0ff';

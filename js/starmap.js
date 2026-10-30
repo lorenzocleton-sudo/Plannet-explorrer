@@ -152,7 +152,7 @@ function bodyInfo(b) {
   let tot = 0, got = 0;
   for (const cat in S) for (const sp of S[cat]) { tot++; if (known(sp)) got++; }
   const drills = Object.keys(save.drills[b.id] || {}).length;
-  return `<p>Gravity ${b.g} m/s² · Radius ${(b.R / 1000).toFixed(1)} km</p>
+  return `<p>Gravity ${b.g} m/s² · Radius ${(b.R / 1000).toFixed(1)} km · Day ${Math.round(b.dayLen / 60)} min</p>
     <p>${atmoText(b)}</p>
     <p class="muted">${b.desc}</p>
     ${isUnlocked(b) ? `<p>Catalogued ${got}/${tot} species${drills ? ` · ${drills} drill${drills > 1 ? 's' : ''} running` : ''}</p>` : ''}`;

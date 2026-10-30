@@ -133,7 +133,8 @@ function syncSky() {
   STARS.position.copy(camera.position);
   w.sun.position.copy(w.landerPos).addScaledVector(w.sunDir, 90);
   w.sun.target.position.copy(w.landerPos);
-  w.lamp.intensity = 0;
+  updateLights(w, up);
+  w.lamp.intensity = w.helmet.intensity = 0;
 }
 const cutsceneScene = () => cutscene.phase === 'space' ? space.scene : world.scene;
 

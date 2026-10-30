@@ -119,6 +119,56 @@ function makeClouds(body, Rc) {
   return m;
 }
 
+// ---------- sun + day/night ----------
+// Each world spins once per body.dayLen seconds around a slightly tilted axis. Instead of turning
+// the terrain we turn the sky the other way, which looks the same from the ground.
+const _q3 = new THREE.Quaternion(), _p1 = new THREE.Vector3(), _p2 = new THREE.Vector3();
+function signedAngle(a, b, axis) {
+  _p1.copy(a).addScaledVector(axis, -a.dot(axis)).normalize();
+  _p2.copy(b).addScaledVector(axis, -b.dot(axis)).normalize();
+  return Math.atan2(_p1.clone().cross(_p2).dot(axis), _p1.dot(_p2));
+}
+function initDayCycle(w) {
+  const B = w.body;
+  w.axis = new THREE.Vector3(Math.sin(B.tilt), Math.cos(B.tilt), 0).normalize();
+  w.sunBase = SUN_DIR.clone().addScaledVector(w.axis, -SUN_DIR.dot(w.axis)).normalize();
+  // start at mid-morning at the landing site
+  w.spin0 = signedAngle(w.sunBase, w.L, w.axis) + Math.PI * 2 * 0.17;
+  w.dayT = 0;
+  setDayTime(w, 0);
+}
+function setDayTime(w, t) {
+  w.dayT = t;
+  w.spin = w.spin0 - Math.PI * 2 * t / w.body.dayLen;
+  _q3.setFromAxisAngle(w.axis, w.spin);
+  w.sky.quaternion.copy(_q3);
+  STARS.quaternion.copy(_q3);
+  w.sunDir.copy(w.sunBase).applyQuaternion(_q3);
+}
+// local solar time (0..24) at a point on the surface
+function localTime(w, up) {
+  const a = signedAngle(up, w.sunDir, w.axis);
+  return ((12 - a / (Math.PI * 2) * 24) % 24 + 24) % 24;
+}
+// lights for the current sun position, as seen from `up`
+const _sunCol = new THREE.Color(), _warm = new THREE.Color('#ffb070');
+function updateLights(w, up, head, aim) {
+  const B = w.body, sunAmt = up.dot(w.sunDir);
+  const day = smooth(-0.1, 0.18, sunAmt), dim = B.dark ? 0.15 : 1;
+  w.sun.intensity = 0.95 * dim * smooth(-0.06, 0.12, sunAmt);
+  w.sun.color.copy(_sunCol.set(0xfff6e8)).lerp(_warm, B.atmo ? Math.exp(-Math.pow(sunAmt * 5, 2)) * 0.7 : 0);
+  w.ambient.intensity = lerp(0.045, B.atmo ? 0.35 : 0.2, day * dim);
+  const night = 1 - day * dim;
+  w.lamp.intensity = night * 0.5;
+  w.helmet.intensity = smooth(0.35, 0.65, night) * 2.2;
+  if (head) {
+    w.lamp.position.copy(head);
+    w.helmet.position.copy(head);
+    w.helmet.target.position.copy(aim);
+  }
+  return night;
+}
+
 // sky colour where you stand (mirrors the shader), used for fog and the stars
 const _skyA = new THREE.Color(), _skyB = new THREE.Color();
 function updateSky(w, up, sunDir, camR = camera.position.length()) {

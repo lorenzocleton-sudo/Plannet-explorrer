@@ -427,6 +427,7 @@ function update(dt) {
   for (const fl of floaters) { fl.t += dt; fl.pos.addScaledVector(fl.up, 1.6 * dt); }
   floaters = floaters.filter(fl => fl.t < 1.4);
   if (arrival) { arrival.t += dt; if (arrival.t > 5) arrival = null; }
+  setDayTime(world, world.dayT + dt);
   hurtFlash = Math.max(0, hurtFlash - dt * 1.5);
 }
 
@@ -464,11 +465,11 @@ function syncScene() {
   camera.lookAt(head);
 
   // day / night from where you stand relative to the sun
-  const night = smooth(0.15, -0.25, updateSky(world, up, world.sunDir));
+  updateSky(world, up, world.sunDir);
   if (world.clouds) world.clouds.rotation.y = time * B.atmo.wind;
   STARS.position.copy(camera.position);
-  world.lamp.intensity = B.dark ? 1.6 : night * 1.3;
-  world.lamp.position.copy(player.pos).addScaledVector(up, 3);
+  // helmet light points where you're looking, a little down
+  updateLights(world, up, _a.copy(player.pos).addScaledVector(up, 1.7), _c.copy(player.pos).addScaledVector(player.fwd, 14).addScaledVector(up, -2));
   world.sun.position.copy(player.pos).addScaledVector(world.sunDir, 90);
   world.sun.target.position.copy(player.pos);
   world.lander.beacon.material.color.setHex(Math.sin(time * 4) > 0 ? 0xff4040 : 0x501010);

@@ -30,6 +30,12 @@
 - Icy moons (Vesk, Nyx, Mora, Ixa) have bright ice fields blended into the dust
 - Still no air (black sky, stars) and only rock, dust and sometimes ice to collect
 
+### Part 5: sun and day/night cycle
+- The system's sun now crosses the sky: every world spins on a tilted axis with its own day length (planets 8–15 min, moons ~18–30 min), so you get sunrise, day, sunset and a starry night; the stars, moons and parent planet move across the sky with it
+- You always land in the morning; the HUD shows the local time, and the star map shows each world's day length
+- Sunlight warms to orange near sunrise/sunset on worlds with air; nights are properly dark
+- Helmet light: a spotlight pointing where you look plus a soft glow around you switches on at dusk, so night stays playable
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

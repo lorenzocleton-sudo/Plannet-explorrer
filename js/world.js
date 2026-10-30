@@ -329,21 +329,26 @@ function genBody(body) {
   w.sun.shadow.mapSize.set(2048, 2048);
   Object.assign(w.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 220 });
   w.sun.shadow.bias = -0.0008;
-  w.lamp = new THREE.PointLight(0xfff2d0, 0, 34, 1.5);
-  scene.add(w.ambient, w.sun, w.sun.target, w.lamp, STARS);
+  // small fill light around you plus a helmet spotlight, both for the night
+  w.lamp = new THREE.PointLight(0xfff2d0, 0, 12, 1.5);
+  w.helmet = new THREE.SpotLight(0xfff4dd, 0, 70, 0.62, 0.45, 1.2);
+  scene.add(w.ambient, w.sun, w.sun.target, w.lamp, w.helmet, w.helmet.target, STARS);
 
-  // sky: sun disc, moons (from a planet) or the parent planet (from a moon)
+  // the sky turns around the planet's axis: sun, stars, moons / parent planet all move together
+  w.sky = new THREE.Group();
   const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(2600, 24, 16), new THREE.MeshBasicMaterial({ color: 0xfff1b0, fog: false }));
   sunDisc.position.copy(SUN_DIR).multiplyScalar(90000);
-  scene.add(sunDisc);
+  w.sky.add(sunDisc);
   const srnd = mulberry32(body.seed + 404), sd = new THREE.Vector3();
   if (body.type === 'planet') {
-    for (const M of body.moons) { const dist = 60000 + srnd() * 25000; scene.add(skyBall(bodyColor(M, 'dust'), dist * (0.02 + M.R / 120000), randDir(srnd, sd), dist)); }
+    for (const M of body.moons) { const dist = 60000 + srnd() * 25000; w.sky.add(skyBall(bodyColor(M, 'dust'), dist * (0.02 + M.R / 120000), randDir(srnd, sd), dist)); }
   } else {
     const P = body.parent;
-    scene.add(skyBall(bodyColor(P, 'plains'), 70000 * 0.11, sd.set(0.35, 0.8, -0.45), 70000));
-    for (const M of P.moons) if (M !== body) scene.add(skyBall(bodyColor(M, 'dust'), 80000 * 0.012, randDir(srnd, sd), 80000));
+    w.sky.add(skyBall(bodyColor(P, 'plains'), 70000 * 0.11, sd.set(0.35, 0.8, -0.45), 70000));
+    for (const M of P.moons) if (M !== body) w.sky.add(skyBall(bodyColor(M, 'dust'), 80000 * 0.012, randDir(srnd, sd), 80000));
   }
+  scene.add(w.sky);
+  initDayCycle(w);
 
   // lander + pad
   const L = w.L, lr = R + w.siteH;
