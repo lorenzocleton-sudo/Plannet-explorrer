@@ -1,13 +1,15 @@
 'use strict';
 // ---------- main loop ----------
 let last = performance.now();
-let frameErrShown = false;
+let frameErrShown = false, badFrames = 0;
 function frame(now) {
   requestAnimationFrame(frame); // schedule first: one bad frame must never stop the game
-  try { step(now); }
+  try { step(now); badFrames = 0; }
   catch (err) {
     console.error(err);
     if (!frameErrShown) { frameErrShown = true; toast(`Something went wrong: ${err.message}. The game keeps running; please report this message.`, 'bad', 12000); }
+    // failing every frame means the screen is stuck: say so where it stays visible
+    if (++badFrames === 60 && !document.getElementById('fatal')) showFatal(err);
   }
 }
 function step(now) {
@@ -33,7 +35,20 @@ renderer.domElement.addEventListener('webglcontextlost', e => {
   toast('The graphics stopped responding (out of memory?). Trying to recover…', 'bad', 8000);
 });
 renderer.domElement.addEventListener('webglcontextrestored', () => { applyGraphics(); toast('Graphics recovered.'); });
+// a startup error must never leave a silent black screen
+function showFatal(err) {
+  console.error(err);
+  const d = document.createElement('div');
+  d.id = 'fatal';
+  d.innerHTML = `<b>The game could not start.</b><br>${String(err && err.message || err).replace(/</g, '&lt;')}<br><br>`
+    + `This usually means the browser kept some old game files. Tap Reload; if it keeps happening, please report this message.<br><br>`;
+  const b = document.createElement('button');
+  b.textContent = 'Reload';
+  b.onclick = () => location.replace(location.pathname + '?r=' + Date.now());
+  d.appendChild(b);
+  document.body.appendChild(d);
+}
 resize();
-land(save.current, true);
-arrival = null;
-requestAnimationFrame(frame);
+requestAnimationFrame(frame); // start the loop first so menus and HUD work even if landing fails
+try { land(save.current, true); arrival = null; }
+catch (err) { showFatal(err); }

@@ -1,6 +1,10 @@
 # Changelog
 
 ## v0.5 (prompt 5: survival factory)
+### Fix: black screen after the last update
+- The browser could keep some old game files and load them next to new ones, so the game stopped while starting (black screen, empty star map). Game files now carry a version tag, so an update always loads the full new set
+- If starting ever fails, a message with a Reload button now appears instead of a silent black screen
+
 ### Fix: game could freeze after building machines (reported on a tablet)
 - Machine labels with live numbers ("Battery · 45%", "Smelter · Iron Plate 63%") created a new texture for every new number and never freed them (hundreds within minutes), which can exhaust a tablet's graphics memory and freeze the 3D view while menus still work. Each machine now redraws one label in place
 - Quick taps on PLACE / USE / INTERACT could be missed if the finger lifted before the next frame; taps are now always registered, and a held button can no longer get "stuck" when build mode ends
