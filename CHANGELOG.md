@@ -46,6 +46,12 @@
 ### Part 7: admin controls hidden
 - Admin/debug buttons (fly, teleport, unlock all, UP/DOWN) and the DEBUG badge only appear while debug mode is switched on in Options; they're hidden by default from the very first frame, and the debug shortcuts do nothing while it's off
 
+### Part 8: realistic gravity
+- Gravity is based on real values: Verdara 9.81 m/s² (Earth), Glacia 8.4, Umbros 9.4, Ruska 11.2 and heavy Xeno Prime 14.6
+- Moons are based on Earth's Moon (1.62 m/s²), a bit lower for small moons and higher for big ones (1.45–1.88 m/s²), never low enough for silly jumps
+- Jumps are now about 0.4–0.7 m on planets (lowest on Xeno Prime) and 3–4 m on moons (it used to be up to ~20 m)
+- Fall damage still scales with local gravity: a 10 m drop hurts on planets (31–81 HP) but not on moons, and 30 m on a moon costs at most ~9 HP
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

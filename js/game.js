@@ -1,6 +1,7 @@
 'use strict';
 // ---------- player, physics on a sphere, gameplay, input ----------
-const PICK_R = 2.6, SCAN_R = 34, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG_TIME = 1.4, JUMP_V = 6.2, WALK_SPEED = 14;
+// JUMP_V gives ~0.6 m jumps at Earth gravity and ~3.6 m on a Moon-like 1.62 m/s² (h = v² / 2g)
+const PICK_R = 2.6, SCAN_R = 34, SCAN_CD = 4, SCAN_TIME = 0.9, BAG_MAX = 10, DIG_TIME = 1.4, JUMP_V = 3.43, WALK_SPEED = 14;
 
 const player = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0),
