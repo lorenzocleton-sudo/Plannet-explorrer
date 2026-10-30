@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3 (prompt 3, the big update)
+### Stage 1: round planets, gravity and atmosphere
+- Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre
+- Every planet and moon has its own gravity (shown in the HUD), changing jump height and fall speed
+- 11 moons across the system; moons only have rock, dust and sometimes ice (no plants, no seas)
+- Breathable air is only revealed once you land ("Atmosphere: breathable" / "No breathable oxygen")
+- Much bigger mountains (up to ~100 m) and much bigger seas (30–65% of each planet)
+- Day and night sides, a starry sky, the sun, and moons / parent planet visible in the sky
+- New radar minimap that rotates with your view
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher
