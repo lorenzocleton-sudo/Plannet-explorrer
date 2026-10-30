@@ -39,6 +39,11 @@
 - Upgrades are researched, then crafted at a Fabricator: Bigger Oxygen Tank, Cold Suit, Heat Suit, Faster Drills, Better Helmet Light, Bigger Backpack, Cargo Exoframe, and the Long-range Scanner tool
 - Travelling costs Rocket Fuel from the lander's hold (or crates next to it): 4 to hop between a planet and its moons, 9–22 between planets, so you have to build a fuel setup (Refinery + Ice + power) before you can leave
 
+### Stage 6: saving
+- Each planet and moon keeps its own base: every building, its rotation, contents, progress, battery charge and stored oxygen; the game autosaves every 10 seconds
+- Machines catch up while you're away: when you come back to a world (or reopen the game) the time you were gone is replayed, up to 24 hours, using average daylight for solar power; the lander only counts as power/storage for that world if it was actually there
+- A message tells you what your machines made while you were gone
+
 ## v0.4 (prompt 4)
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill

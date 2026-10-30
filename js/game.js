@@ -69,10 +69,10 @@ function o2SourceNear() { return typeof factoryO2Near === 'function' ? factoryO2
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _m = new THREE.Vector3();
 const _r = new THREE.Vector3(), _t = new THREE.Vector3(), _u = new THREE.Vector3(), _mat = new THREE.Matrix4();
 
-function land(bodyId) {
+function land(bodyId, resumed = false) {
   if (typeof stopBuild === 'function' && world) stopBuild();
   if (typeof factoryChanged === 'function') factoryChanged();
-  if (world) { world.scene.remove(playerMesh, playerLabel); disposeWorld(world); }
+  if (world) { baseData(world.body.id).t = Date.now(); world.scene.remove(playerMesh, playerLabel); disposeWorld(world); }
   const body = bodyById(bodyId);
   genBody(body);
   world.scene.add(playerMesh, playerLabel);
@@ -90,6 +90,13 @@ function land(bodyId) {
   warmTerrain(world, camera.position);
   updateSampleCells(world, 99);
   if (typeof radarT !== 'undefined') radarT = 0;
+  // machines here kept working while you were away (the lander was only here if you just reloaded)
+  const away = catchUp(world, resumed);
+  if (away && Object.keys(away.gained).length) {
+    const list = Object.entries(away.gained).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id, n]) => `${n} ${itemName(id)}`).join(', ');
+    setTimeout(() => toast(`While you were away (${awayText(away.secs)}) your machines made ${list}.`, 'new', 7000), 600);
+  }
+  writeSave();
   arrival = {
     t: 0, ok: body.breathable,
     title: `${body.name}${body.type === 'moon' ? ' (moon)' : ''}`,
@@ -117,14 +124,14 @@ function resetPlayer() {
 
 // ---------- toasts / floaters ----------
 const toastBox = $('toasts');
-function toast(text, cls = '') {
+function toast(text, cls = '', ms = 3200) {
   const d = document.createElement('div');
   d.className = 'toast ' + cls;
   d.textContent = text;
   toastBox.appendChild(d);
   while (toastBox.children.length > 5) toastBox.firstChild.remove();
-  setTimeout(() => { d.style.opacity = '0'; }, 3200);
-  setTimeout(() => d.remove(), 3800);
+  setTimeout(() => { d.style.opacity = '0'; }, ms);
+  setTimeout(() => d.remove(), ms + 600);
 }
 function floater(pos, up, text, color = '#fff') {
   floaters.push({ pos: pos.clone().addScaledVector(up, 1.5), up: up.clone(), text, color, t: 0 });

@@ -21,6 +21,6 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 resize();
-land(save.current);
+land(save.current, true);
 arrival = null;
 requestAnimationFrame(frame);

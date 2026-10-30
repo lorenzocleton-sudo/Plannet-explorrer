@@ -33,15 +33,15 @@ function storeOf(b) {
 }
 
 // work out power grids (sources within range of each other join up) and storage links
-function rebuildLinks(w) {
+function rebuildLinks(w, withLander = true) {
   const L = landerNode(w);
-  const nodes = [L, ...w.buildings.filter(b => b.def.gen || b.def.capacity)];
+  const nodes = [...(withLander ? [L] : []), ...w.buildings.filter(b => b.def.gen || b.def.capacity)];
   const parent = nodes.map((_, i) => i), find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
   for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++)
     if (nodes[i].pos.distanceTo(nodes[j].pos) <= POWER_RANGE) parent[find(i)] = find(j);
   const grids = new Map();
   nodes.forEach((n, i) => { const g = find(i); if (!grids.has(g)) grids.set(g, { nodes: [], users: [], ratio: 0, gen: 0, demand: 0 }); grids.get(g).nodes.push(n); n.grid = grids.get(g); });
-  const storeNodes = [L, ...w.buildings.filter(b => b.type === 'crate')];
+  const storeNodes = [...(withLander ? [L] : []), ...w.buildings.filter(b => b.type === 'crate')];
   for (const b of w.buildings) {
     b.grid = null;
     if (b.def.power) {
@@ -87,7 +87,7 @@ function solarFactor(w, b, offline) {
 
 // advance the whole base by dt seconds
 function simulate(w, dt, offline = false) {
-  if (factoryDirty || !w.grids) rebuildLinks(w);
+  if (!offline && (factoryDirty || !w.grids)) rebuildLinks(w);
   const debugFast = typeof debugOn === 'function' && debugOn();
   // ----- power -----
   for (const g of w.grids) {
@@ -123,42 +123,57 @@ function simulate(w, dt, offline = false) {
       } else s.prog = 0;
       flushBuf(b, 'buf');
     } else if (b.type === 'smelter') {
-      if (!s.cur && invTotal(s.out || {}) < OUT_BUF) {
-        const list = s.mode && s.mode !== 'auto' ? SMELT.filter(r => r.id === s.mode) : SMELT.slice((s.rr || 0)).concat(SMELT.slice(0, s.rr || 0));
-        for (const r of list) if (storesTake(b.stores, r.in)) { s.cur = r.id; s.prog = 0; s.rr = (SMELT.indexOf(r) + 1) % SMELT.length; break; }
-      }
-      if (s.cur) {
-        const r = SMELT.find(x => x.id === s.cur);
-        s.prog += dt * pw * speed / r.time; b.working = pw > 0;
-        if (s.prog >= 1) { bufAdd(s, 'out', r.out); s.cur = null; s.prog = 0; s.made = (s.made || 0) + 1; }
+      // `work` = seconds of full-speed work available this step; finish as many batches as it covers
+      let work = dt * pw * speed;
+      while (true) {
+        if (!s.cur) {
+          if (invTotal(s.out || {}) >= OUT_BUF) break;
+          const list = s.mode && s.mode !== 'auto' ? SMELT.filter(r => r.id === s.mode) : SMELT.slice((s.rr || 0)).concat(SMELT.slice(0, s.rr || 0));
+          for (const r of list) if (storesTake(b.stores, r.in)) { s.cur = r.id; s.prog = 0; s.rr = (SMELT.indexOf(r) + 1) % SMELT.length; break; }
+          if (!s.cur) break;
+        }
+        const r = SMELT.find(x => x.id === s.cur), need = (1 - s.prog) * r.time;
+        b.working = pw > 0;
+        if (work < need || work <= 0) { s.prog += work / r.time; break; }
+        work -= need;
+        bufAdd(s, 'out', r.out); s.cur = null; s.prog = 0; s.made = (s.made || 0) + 1;
+        flushBuf(b, 'out');
       }
       flushBuf(b, 'out');
     } else if (b.type === 'fabricator') {
       const q = s.q || (s.q = []);
-      if (q.length) {
-        const r = fabById(q[0]);
-        s.prog = (s.prog || 0) + dt * pw * speed / r.time; b.working = pw > 0;
-        if (s.prog >= 1) {
-          s.prog = 0; q.shift();
-          if (r.out) bufAdd(s, 'out', r.out);
-          else { save.upgrades[r.id] = true; if (w === world && !offline) toast(`${fabName(r)} installed! ${r.desc}`, 'new'); }
-        }
+      let work = dt * pw * speed;
+      while (q.length && work > 0) {
+        const r = fabById(q[0]), need = (1 - (s.prog || 0)) * r.time;
+        b.working = true;
+        if (work < need) { s.prog = (s.prog || 0) + work / r.time; break; }
+        work -= need; s.prog = 0; q.shift();
+        if (r.out) bufAdd(s, 'out', r.out);
+        else { save.upgrades[r.id] = true; if (w === world && !offline) toast(`${fabName(r)} installed! ${r.desc}`, 'new'); }
       }
       flushBuf(b, 'out');
     } else if (b.type === 'o2gen') {
       s.o2 = s.o2 || 0; s.ice = s.ice || 0;
-      if (s.o2 < O2_CAP) {
-        if (s.ice <= 0 && storesTake(b.stores, { ice: 1 })) s.ice += 1;
-        if (s.ice > 0) {
-          const made = Math.min(O2_RATE * dt * pw * speed, s.ice * O2_PER_ICE, O2_CAP - s.o2);
-          s.o2 += made; s.ice -= made / O2_PER_ICE; b.working = made > 0;
-        }
+      let canMake = O2_RATE * dt * pw * speed;
+      while (s.o2 < O2_CAP && canMake > 0) {
+        if (s.ice <= 1e-6 && !storesTake(b.stores, { ice: 1 })) break;
+        if (s.ice <= 1e-6) s.ice += 1;
+        const made = Math.min(canMake, s.ice * O2_PER_ICE, O2_CAP - s.o2);
+        s.o2 += made; s.ice -= made / O2_PER_ICE; canMake -= made; b.working = made > 0;
       }
     } else if (b.type === 'refinery') {
-      if (!s.busy && invTotal(s.out || {}) < OUT_BUF && storesTake(b.stores, { ice: 2 })) { s.busy = true; s.prog = 0; }
-      if (s.busy) {
-        s.prog += dt * pw * speed / FUEL_TIME; b.working = pw > 0;
-        if (s.prog >= 1) { s.busy = false; s.prog = 0; bufAdd(s, 'out', { fuel: 1 }); s.made = (s.made || 0) + 1; }
+      let work = dt * pw * speed;
+      while (true) {
+        if (!s.busy) {
+          if (invTotal(s.out || {}) >= OUT_BUF || !storesTake(b.stores, { ice: 2 })) break;
+          s.busy = true; s.prog = 0;
+        }
+        const need = (1 - s.prog) * FUEL_TIME;
+        b.working = pw > 0;
+        if (work < need || work <= 0) { s.prog += work / FUEL_TIME; break; }
+        work -= need;
+        s.busy = false; s.prog = 0; bufAdd(s, 'out', { fuel: 1 }); s.made = (s.made || 0) + 1;
+        flushBuf(b, 'out');
       }
       flushBuf(b, 'out');
     }
@@ -217,6 +232,35 @@ function syncFactory(dt) {
     }
   }
 }
+// ---------- catching up while you were away ----------
+// Bases on other worlds don't run while you're elsewhere; when you come back (or reload the game)
+// the time you were gone is replayed in 30 s steps (up to a day), with average daylight for solar.
+const CATCHUP_MAX = 24 * 3600, CATCHUP_STEP = 30;
+function baseTotals(w) {
+  const t = {};
+  const add = inv => { for (const id in inv || {}) t[id] = (t[id] || 0) + inv[id]; };
+  for (const b of w.buildings) { add(b.rec.s.items); add(b.rec.s.buf); add(b.rec.s.out); }
+  return t;
+}
+function catchUp(w, landerWasHere) {
+  const base = baseData(w.body.id), secs = Math.min(CATCHUP_MAX, (Date.now() - (base.t || Date.now())) / 1000);
+  base.t = Date.now();
+  if (!w.buildings.length || secs < 5) return null;
+  const before = baseTotals(w), landerBefore = Object.assign({}, landerInv());
+  rebuildLinks(w, landerWasHere);
+  for (let t = 0; t < secs; t += CATCHUP_STEP) simulate(w, Math.min(CATCHUP_STEP, secs - t), true);
+  factoryChanged();
+  // what piled up (in crates, machine buffers and, if it stayed here, the lander)
+  const after = baseTotals(w), gained = {};
+  for (const id in after) if (after[id] > (before[id] || 0)) gained[id] = after[id] - (before[id] || 0);
+  if (landerWasHere) for (const id in landerInv()) if (landerInv()[id] > (landerBefore[id] || 0)) gained[id] = (gained[id] || 0) + landerInv()[id] - (landerBefore[id] || 0);
+  return { secs, gained };
+}
+function awayText(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor(secs % 3600 / 60);
+  return h ? `${h} h ${m} min` : m ? `${m} min` : `${Math.round(secs)} s`;
+}
+
 // run the simulation in small fixed steps
 function factoryTick(dt) {
   if (!world || !world.buildings) return;
