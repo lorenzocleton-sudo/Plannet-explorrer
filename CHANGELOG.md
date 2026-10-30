@@ -14,6 +14,14 @@
 - Hold Interact at a spot to dig common ores by hand
 - New inventory (60 slots, more with upgrades) and lander hold (400): raw resources unload into the lander automatically; old saves' resources move into the lander under their new names
 
+### Stage 3: build mode
+- Build menu (`B`, the 🔨 hotbar slot, or tap it on touch) listing every machine with its cost and what you're missing
+- Placing shows a see-through preview that snaps to the ground (green = OK, red = blocked, with the reason) and a ring showing the machine's range; drills snap onto mining spots
+- Rotate before placing (`R` / mouse wheel / ROTATE); place with `E` / left click / PLACE; `Esc` / ✕ to stop
+- Deconstruct mode (`X` or from the build menu): hold on a building to remove it and get all its materials and contents back
+- Materials come from your inventory, nearby crates and the lander's hold (its drone delivers anywhere on the current world); new and existing saves get a starter kit of 40 Iron Plates, 16 Copper Wire and 8 Silicon Wafers in the lander
+- Buildings are saved per planet/moon
+
 ## v0.4 (prompt 4)
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill

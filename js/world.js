@@ -365,6 +365,7 @@ function genBody(body) {
   scene.add(lander.group, pad, w.landerLabel, w.landerLight);
 
   spawnSpots(w);
+  loadBase(w);
   return w;
 }
 

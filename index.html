@@ -64,6 +64,26 @@
   #skipBtn{display:none;position:fixed;right:16px;bottom:calc(9vh + 12px);z-index:15;background:rgba(10,13,30,.8);border:1px solid #3b4a8a;font-size:15px;padding:10px 18px}
   body.cutscene #skipBtn{display:block}
   body.cutscene #hotbar, body.cutscene #touch, body.cutscene #toasts, body.cutscene #joy, body.cutscene #tPause, body.cutscene #tDebug{display:none !important}
+  .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .bcard{background:#161c3a;border:1px solid #27305e;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .bcard.locked{opacity:.55}
+  .bcard b{font-size:16px}
+  .bcard p{margin:0;font-size:13px}
+  .bcard button{margin-top:auto;padding:8px 12px;font-size:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{display:inline-flex;align-items:center;gap:4px;background:#0e1430;border:1px solid #2b3566;border-radius:6px;padding:2px 7px;font-size:12px}
+  .chip i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .chip em{color:#ff8d8d;font-style:normal}
+  /* build mode on touch: ROTATE / PLACE / CANCEL replace the normal buttons */
+  #buildBar{display:none}
+  body.touch.building #touch{display:none}
+  body.touch.building #buildBar{display:block;position:fixed;right:18px;bottom:18px;width:236px;height:200px;z-index:5;pointer-events:none}
+  #buildBar .tb,#buildBar .tsm{position:absolute;pointer-events:auto}
+  #buildBar .tb{border-radius:50%;padding:0;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.38)}
+  #bPlace{right:0;bottom:0;width:100px;height:100px;font-size:12px!important;background:rgba(80,220,130,.3)!important}
+  #bRotate{right:112px;bottom:4px;width:80px;height:80px}
+  #bCancel{right:20px;bottom:120px}
+  body.cutscene #buildBar{display:none!important}
   #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 360px);min-width:240px}
   .toast{background:rgba(16,20,42,.92);border:1px solid #3b4a8a;border-radius:8px;padding:6px 14px;font-size:14px;transition:opacity .5s;text-align:center}
   .toast.new{border-color:#ffd166;color:#ffe3a1}
@@ -101,6 +121,7 @@
 <button id="skipBtn">Skip ▸▸</button>
 
 <div id="joy"><div id="joyKnob"></div></div>
+<div id="buildBar"><button class="tb" id="bRotate">ROTATE</button><button class="tb big" id="bPlace">PLACE</button><button class="tsm" id="bCancel">✕</button></div>
 <div id="touch">
   <button class="tb" id="tInteract">INTERACT</button>
   <button class="tb" id="tJump">JUMP</button>
@@ -121,6 +142,7 @@
       <li><kbd>1</kbd>–<kbd>3</kbd> / <kbd>Wheel</kbd> switch tool</li>
       <li><kbd>E</kbd> / <kbd>Left click</kbd> use tool</li>
       <li><kbd>F</kbd> interact (lander, drills, samples)</li>
+      <li><kbd>B</kbd> build menu · <kbd>R</kbd> rotate · <kbd>X</kbd> deconstruct</li>
       <li><kbd>Q</kbd> quick scanner pulse</li>
       <li><kbd>C</kbd> research codex</li>
       <li><kbd>M</kbd> star map (at lander)</li>
@@ -198,6 +220,7 @@
 </div>
 
 <div class="overlay" id="codex"><div class="panel" id="codexBody"></div></div>
+<div class="overlay" id="buildMenu"><div class="panel" id="buildBody" style="max-width:900px"></div></div>
 <div class="overlay" id="starmap">
   <div class="panel mappanel">
     <div class="maphead">
@@ -221,6 +244,8 @@
 <script src="js/render.js"></script>
 <script src="js/game.js"></script>
 <script src="js/mining.js"></script>
+<script src="js/factory.js"></script>
+<script src="js/build.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/starmap.js"></script>
 <script src="js/cutscene.js"></script>

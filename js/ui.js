@@ -1,18 +1,19 @@
 'use strict';
 // ---------- menus, codex, star map, HUD ----------
 const menus = {
-  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'),
+  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'),
 };
-let menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause = 0;
+let menuOpenedAt = 0, menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause = 0;
 
 function showMenu(name, back = null) {
   for (const k in menus) menus[k].classList.toggle('show', k === name);
-  menu = name; menuBack = back;
+  menu = name; menuBack = back; menuOpenedAt = performance.now();
   keys.clear(); touchAct = touchInteract = mouseUse = false;
   if (name === 'pause') renderPause();
   if (name === 'options') renderOptions();
   if (name === 'codex') renderCodex();
   if (name === 'map') renderMap();
+  if (name === 'build') renderBuildMenu();
   if (document.pointerLockElement) { suppressUnlockPause = true; document.exitPointerLock(); }
 }
 function resume() {
@@ -44,7 +45,7 @@ $('pCodex').onclick = () => showMenu('codex', 'pause');
 $('pMap').onclick = () => openStarMap('pause');
 $('pOpt').onclick = () => showMenu('options', 'pause');
 $('pQuit').onclick = () => { writeSave(); showMenu('title'); };
-for (const k of ['codex', 'map']) menus[k].addEventListener('click', e => { if (e.target === menus[k]) goBack(); });
+for (const k of ['codex', 'map', 'build']) menus[k].addEventListener('click', e => { if (e.target === menus[k] && performance.now() - menuOpenedAt > 400) goBack(); });
 
 function renderPause() {
   $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Inventory ${invTotal(playerInv())}/${invCap()}`;

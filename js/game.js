@@ -70,6 +70,7 @@ const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3
 const _r = new THREE.Vector3(), _t = new THREE.Vector3(), _u = new THREE.Vector3(), _mat = new THREE.Matrix4();
 
 function land(bodyId) {
+  if (typeof stopBuild === 'function' && world) stopBuild();
   if (world) { world.scene.remove(playerMesh, playerLabel); disposeWorld(world); }
   const body = bodyById(bodyId);
   genBody(body);
@@ -235,12 +236,14 @@ const TOOLS = [
   { id: 'scanner', name: 'Scanner', icon: '📡', hint: 'Pulse to reveal buried fossils and nearby samples' },
   { id: 'collector', name: 'Collector', icon: '🧺', hint: 'Pick up samples (hold to dig up fossils)' },
   { id: 'drill', name: 'Drill', icon: '⛏️', hint: 'Place a drill on a mining spot, collect its resources later' },
+  { id: 'build', name: 'Build', icon: '🔨', hint: 'Open the build menu' },
 ];
 let tool = 1;
-function selectTool(i) {
+function selectTool(i, open = true) {
   tool = (i + TOOLS.length) % TOOLS.length;
   digT = 0; digTarget = null;
   renderHotbar();
+  if (open && TOOLS[tool].id === 'build' && world && !menu) openBuildMenu();
 }
 // control names shown in prompts
 const KEY = isTouch ? { use: 'USE', interact: 'INTERACT' } : { use: '[E]', interact: '[F]' };
@@ -293,7 +296,8 @@ addEventListener('mouseup', e => { dragging = false; if (e.button === 0) mouseUs
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('wheel', e => {
   if (menu || Math.abs(e.deltaY) <= 2) return;
-  selectTool(tool + (e.deltaY > 0 ? 1 : -1));
+  if (build.active && build.mode === 'place') { rotateBuild(); return; }
+  selectTool(tool + (e.deltaY > 0 ? 1 : -1), false);
 }, { passive: true });
 addEventListener('mousemove', e => {
   if (menu) return;
@@ -430,27 +434,31 @@ function update(dt) {
   const inter = keys.has('f') || touchInteract;
   const iPressed = inter && !interPrev;
   interPrev = inter;
-  const tid = TOOLS[tool].id;
-  const near = nearestItem(), spot = nearestSpot();
-  if (tid === 'scanner' && pressed) doScan();
-  if (iPressed && atLander()) openStarMap();
-  else if (spot && inter && !drillState(spot)) handMine(spot, inter, dt);
-  else if (spot && (inter || tid === 'drill')) useDrill(act || inter, pressed || iPressed, dt);
-  else if (tid === 'drill') useDrill(act, pressed, dt);
-  if (!inter) handMine(null, false, dt);
-  if (near && ((act && tid === 'collector') || (inter && !spot))) {
-    if (near.cat === 'fossil') {
-      if (digTarget !== near) { digTarget = near; digT = 0; }
-      digT += dt;
-      near.mesh.position.copy(near.pos).addScaledVector(near.dir, Math.sin(time * 40) * 0.05);
-      if (digT >= DIG_TIME) { collect(near); digT = 0; digTarget = null; }
-    } else if (pickCd <= 0) {
-      collect(near);
-      pickCd = 0.18;
+  if (build.active) updateBuild(dt, act, pressed);
+  else {
+    const tid = TOOLS[tool].id;
+    const near = nearestItem(), spot = nearestSpot();
+    if (tid === 'scanner' && pressed) doScan();
+    if (tid === 'build' && pressed) openBuildMenu();
+    if (iPressed && atLander()) openStarMap();
+    else if (spot && inter && !drillState(spot)) handMine(spot, inter, dt);
+    else if (spot && (inter || tid === 'drill')) useDrill(act || inter, pressed || iPressed, dt);
+    else if (tid === 'drill') useDrill(act, pressed, dt);
+    if (!inter) handMine(null, false, dt);
+    if (near && ((act && tid === 'collector') || (inter && !spot))) {
+      if (near.cat === 'fossil') {
+        if (digTarget !== near) { digTarget = near; digT = 0; }
+        digT += dt;
+        near.mesh.position.copy(near.pos).addScaledVector(near.dir, Math.sin(time * 40) * 0.05);
+        if (digT >= DIG_TIME) { collect(near); digT = 0; digTarget = null; }
+      } else if (pickCd <= 0) {
+        collect(near);
+        pickCd = 0.18;
+      }
+    } else {
+      digT = 0; digTarget = null;
+      if (iPressed && !spot && !atLander()) toast('Nothing to interact with here. Walk up to a sample, a drill spot or the lander.');
     }
-  } else {
-    digT = 0; digTarget = null;
-    if (iPressed && !spot && !atLander()) toast('Nothing to interact with here. Walk up to a sample, a drill spot or the lander.');
   }
 
   // scanner pulses reveal as the ring passes

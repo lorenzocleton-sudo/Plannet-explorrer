@@ -122,9 +122,11 @@ function pickSpecies(r, list) {
 }
 
 // ---------- save + options ----------
+// what the lander carries at the start: enough for a first drill or two, a smelter and a solar panel
+const STARTER_KIT = { iron_plate: 40, copper_wire: 16, wafer: 8 };
 const SAVE_KEY = 'planetExplorer.save.v1', OPT_KEY = 'planetExplorer.options.v1';
 function defaultSave() {
-  return { ver: 5, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, drills: {}, upgrades: {}, inv: {}, lander: { items: {} } };
+  return { ver: 5, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, drills: {}, upgrades: {}, inv: {}, lander: { items: Object.assign({}, STARTER_KIT) }, kit: true, bases: {} };
 }
 function loadSave() {
   try {
@@ -149,6 +151,11 @@ function loadSave() {
         s.drills = {};
         delete s.res;
         s.ver = 5;
+      }
+      if (!s.kit) { // starter kit so the first machines can be built
+        s.lander = s.lander || { items: {} };
+        for (const id in STARTER_KIT) s.lander.items[id] = (s.lander.items[id] || 0) + STARTER_KIT[id];
+        s.kit = true;
       }
       return Object.assign(defaultSave(), s);
     }
