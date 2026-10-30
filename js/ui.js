@@ -318,9 +318,10 @@ function drawHUD(dt) {
   hx.textAlign = 'left';
   // ---- helmet HUD: no boxes, thin readouts along the edges of the visor ----
   visorEdge();
+  drawCompass();
   const lt = localTime(world, player.up), hh = Math.floor(lt), mm = Math.floor((lt - hh) * 60);
   hudText(B.name.toUpperCase(), 22, 26, 15, HUD_C.accent, 'bold', 2);
-  hudText(`${B.breathable ? 'AIR OK' : 'NO O₂'} · ${B.g.toFixed(1)} M/S² · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · ALT ${(player.pos.length() - world.R).toFixed(0)} M`, 22, 45, 10.5, B.breathable ? HUD_C.ok : HUD_C.warn, '600', 1);
+  hudText(`${B.breathable ? 'AIR OK' : 'NO O₂'} · ${B.g.toFixed(1)} M/S² · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · ALT ${(player.pos.length() - world.R).toFixed(0)} M${WX.type && WX.strength > 0.2 ? ' · ' + WEATHER_TYPES[WX.type].name.toUpperCase() : ''}`, 22, 45, 10.5, B.breathable ? HUD_C.ok : HUD_C.warn, '600', 1);
   const blink = Math.sin(time * 10) > 0;
   const temp = player.temp ?? 0, hurtT = climateDamage(temp);
   let y = 72;

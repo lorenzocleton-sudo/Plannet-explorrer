@@ -42,6 +42,8 @@ Or open `index.html` in a browser. There's no install or build step, and it work
 
 The **Options** menu has mouse, camera and label settings, **Detail** (Low / Medium / High: Low is for older tablets) and a debug mode. With debug mode on, the pause menu gets an **Admin** tab: fly mode (`V`; on touch JUMP goes up and INTERACT goes down), teleport to the lander (`T`), infinite oxygen, god mode, fast machines and free travel, and unlock all planets. No admin buttons are ever on the play screen.
 
+**New in v0.7**: research and craft a **rover** at the Fabricator (INTERACT next to it to drive or use its cargo; INTERACT again to get out), place named, coloured **beacons** that show on the **compass** at the top of the screen, and watch for **weather** on worlds with air (storms cut visibility and solar power). Sound and music are generated in the game; Options has master, music and effects volume.
+
 Every world has its own look: several biomes per planet, textured ground, trees, plants and rocks that fit the biome, water that is clear in the shallows, sky colours from the air's chemistry (shown when you land) and moons that orbit and show phases. Asset sources and licences are in [CREDITS.md](CREDITS.md).
 
 Progress is saved automatically in your browser.

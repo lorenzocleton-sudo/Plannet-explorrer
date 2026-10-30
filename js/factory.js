@@ -20,10 +20,12 @@ const MACHINES = {
                 desc: 'Stores spare power for the night and passes power on to machines nearby.' },
   o2gen:      { name: 'Oxygen Generator', cost: { iron_plate: 10, copper_wire: 4, circuit: 2 }, fp: 1.1, power: 2,
                 desc: `Ice + power into oxygen. Refills your suit within ${O2_RANGE} m.` },
+  beacon:     { name: 'Beacon',           cost: { iron_plate: 2, copper_wire: 1 }, fp: 0.5,
+                desc: 'A marker with a name and colour of your choice. Shows on the compass and glows from far away.' },
   refinery:   { name: 'Fuel Refinery',    cost: { iron_plate: 14, gear: 4, circuit: 3 }, fp: 1.8, power: 3,
                 desc: 'Ice + power into Rocket Fuel for travelling to other worlds.' },
 };
-const LABEL_H = { drill: 4.2, crate: 1.9, smelter: 3.6, fabricator: 2.6, solar: 3.2, battery: 2.4, o2gen: 3.0, refinery: 4.4 };
+const LABEL_H = { beacon: 3.4, drill: 4.2, crate: 1.9, smelter: 3.6, fabricator: 2.6, solar: 3.2, battery: 2.4, o2gen: 3.0, refinery: 4.4 };
 
 // ---------- models ----------
 const M_STD = (color, extra = {}) => { const m = new THREE.MeshStandardMaterial(Object.assign({ color, flatShading: true, roughness: 0.6, metalness: 0.2 }, extra)); sharedMats.add(m); return m; };
@@ -37,6 +39,7 @@ const G = (geo, mat, x = 0, y = 0, z = 0) => { sharedGeos.add(geo); const m = ne
 const GEOS = {};
 const geo = (key, make) => GEOS[key] || (GEOS[key] = make());
 function machineModel(type) {
+  if (type === 'beacon') return beaconModel(BEACON_COLORS[4]);
   const g = new THREE.Group(), add = (...ms) => ms.forEach(m => g.add(m));
   if (type === 'drill') {
     add(G(DRILL_GEO.frame, MAT.yellow), G(DRILL_GEO.tower, MAT.yellow));
@@ -89,6 +92,7 @@ function spawnBuilding(w, rec) {
   placeOnSurface(b.mesh, dir, r, rec.r);
   b.label = makeDynLabel(0.55);
   setDynLabel(b.label, def.name, '#ffd98a');
+  if (rec.t === 'beacon') styleBeacon(b);
   b.label.position.copy(dir).multiplyScalar(r + LABEL_H[rec.t]);
   w.scene.add(b.mesh, b.label);
   w.buildings.push(b);

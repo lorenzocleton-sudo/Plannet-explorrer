@@ -1,7 +1,7 @@
 'use strict';
 // ---------- tech tree (spend Research Points from analyzed samples) ----------
 const TECH = [
-  { id: 'base', tier: 1, name: 'Basic Industry', cost: 0, req: [], unlocks: ['drill', 'crate', 'smelter', 'solar'], desc: 'Drills, crates, smelters and solar panels.' },
+  { id: 'base', tier: 1, name: 'Basic Industry', cost: 0, req: [], unlocks: ['drill', 'crate', 'smelter', 'solar', 'beacon'], desc: 'Drills, crates, smelters, solar panels and beacons.' },
   { id: 'fab', tier: 2, name: 'Fabrication', cost: 10, req: ['base'], unlocks: ['fabricator', 'gear', 'circuit'], desc: 'The Fabricator, Gears and Circuits.' },
   { id: 'battery', tier: 3, name: 'Energy Storage', cost: 15, req: ['fab'], unlocks: ['battery'], desc: 'Batteries keep machines running at night.' },
   { id: 'o2gen', tier: 3, name: 'Life Support', cost: 20, req: ['fab'], unlocks: ['o2gen'], desc: 'Oxygen Generator: refill your suit away from the lander.' },

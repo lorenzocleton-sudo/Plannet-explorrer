@@ -1,6 +1,11 @@
 # Changelog
 
 ## v0.7 (prompt 7: fixes, polish and new features)
+### Part 5 (steps 9–10)
+- **Beacons**: a cheap building (2 iron plates, 1 copper wire) unlocked from the start. After placing one you name it and pick a colour (INTERACT to change it later). It glows, sends a faint light beam up into the sky and shows on the compass
+- **Compass**: a bar at the top of the screen with your heading, N/E/S/W (north follows the planet's axis) and markers for your beacons, the lander (only within 50 m), your rover and the points of interest you've discovered (mining deposits, uncovered fossils). The marker you're facing shows its name and distance
+- **Weather** on worlds with air only: rain and thunderstorms (with lightning and thunder) on Verdara, dust storms on Ruska, snow and blizzards on Glacia, acid rain and storms on Xeno Prime. Airless Umbros and the moons have none. Fronts build up, peak and clear on their own; while they last the haze closes in (down to a few hundred metres in a dust storm), the light and clouds darken, solar panels lose up to 75% of their power, and rain or wind sounds join in. The weather shows in the HUD status line
+
 ### Part 4 (steps 7–8)
 - **Sound** (all generated in the browser, no audio files): footsteps that change with the ground (grass, dirt, sand, snow, rock, water, the lander's metal pad), gusty wind that grows with height and thick air, waves near the sea, drills grinding and machines humming near you, lander thrusters during takeoff and landing, and soft UI clicks. On airless worlds there's no wind: you only hear muffled thuds through your boots and your own breathing in the suit
 - **Music**: calm generative ambient music with its own mood per kind of world (warm on Verdara, sparse on Ruska, glassy on Glacia, strange on Xeno Prime, low and uneasy on Umbros, empty bells on moons)

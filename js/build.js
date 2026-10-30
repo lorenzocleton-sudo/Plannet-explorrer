@@ -142,11 +142,13 @@ function placeMachine(type, c) {
   const base = baseData();
   const rec = { u: base.n++, t: type, d: c.dir.toArray().map(v => +v.toFixed(6)), r: +build.rot.toFixed(3), s: {} };
   if (def.onSpot) rec.s.spot = c.spot.idx;
+  if (type === 'beacon') rec.s = { name: `Beacon ${base.list.filter(r => r.t === 'beacon').length + 1}`, color: BEACON_COLORS[base.list.filter(r => r.t === 'beacon').length % BEACON_COLORS.length] };
   base.list.push(rec);
-  spawnBuilding(world, rec);
+  const nb = spawnBuilding(world, rec);
   if (typeof factoryChanged === 'function') factoryChanged();
   writeSave();
   floater(c.pos, c.dir, `${def.name} built`, '#8ef0a0');
+  if (type === 'beacon') { stopBuild(); openPanel(nb); return; } // name it and pick a colour
   if (!canAfford(def.cost)) { toast(`Built a ${def.name}. Out of materials for another one.`); stopBuild(); }
 }
 

@@ -84,7 +84,7 @@ const drillSpeed = b => 1 / ((4 + (b.spotDepth || 10) / 8) / (save.upgrades.fast
 function solarFactor(w, b, offline) {
   if (offline) return 0.32; // average over a whole day while you're away
   const s = b.dir.dot(w.sunDir);
-  return smooth(-0.05, 0.4, s) * (w.body.dark ? 0.15 : 1);
+  return smooth(-0.05, 0.4, s) * (w.body.dark ? 0.15 : 1) * (w === world && typeof weatherSolar === 'function' ? weatherSolar() : 1); // storms cut solar power
 }
 
 // advance the whole base by dt seconds
@@ -213,6 +213,7 @@ function machineStatus(b) {
     case 'fabricator': return s.q && s.q.length ? (noPow ? 'no power' : `${fabName(fabById(s.q[0]))} ${pct(s.prog)}`) : 'idle';
     case 'solar': return `${(b.def.gen * solarFactor(world, b)).toFixed(1)} power`;
     case 'battery': return `${pct((s.charge || 0) / b.def.capacity)} charged`;
+    case 'beacon': return s.name || 'Beacon';
     case 'o2gen': return `${Math.round(s.o2 || 0)} O₂` + (noPow && machineWants(b) ? ' · no power' : !(s.ice > 0) && !storesHave(b.stores, { ice: 1 }) && (s.o2 || 0) < O2_CAP ? ' · needs ice' : '');
     case 'refinery': return s.busy ? (noPow ? 'no power' : `fuel ${pct(s.prog)}`) : (b.stores.length ? 'needs ice' : 'no storage nearby');
   }
@@ -229,6 +230,7 @@ function syncFactory(dt) {
     b.mesh.visible = dist < 900;
     if (b.mesh.userData.spin && b.working) b.mesh.userData.spin.rotation.y += 0.3;
     b.label.visible = opts.labels !== 'off' && dist < maxD;
+    if (b.type === 'beacon') { b.label.visible = opts.labels !== 'off' && dist < 400; continue; } // beacons keep their own name
     if (relabel && b.label.visible) {
       const t = `${b.def.name} · ${machineStatus(b)}`;
       if (t !== b.labelText) { b.labelText = t; setDynLabel(b.label, t, b.def.power && (!b.grid || b.grid.ratio < 0.5) && machineWants(b) ? '#ff9d9d' : '#ffd98a'); }

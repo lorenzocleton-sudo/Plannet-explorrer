@@ -87,6 +87,7 @@ function spawnSpots(w) {
 function showSpot(sp) {
   const rnd = mulberry32(sp.seed);
   sp.group = new THREE.Group();
+  sp.seen = true; // discovered: it shows on the compass from now on
   sp.group.add(new THREE.Mesh(SPOT_GEO, resMat(sp.res)));
   for (let i = 0; i < 4; i++) {
     const o = new THREE.Mesh(ORE_GEO, resMat(sp.res));

@@ -428,6 +428,7 @@ function genBody(body) {
   loadBase(w);
   loadRover(w);
   initScenery(w);
+  initWeather(w);
   w.groundTint = new THREE.Color().fromArray(colorAtDir(w.L));
   return w;
 }

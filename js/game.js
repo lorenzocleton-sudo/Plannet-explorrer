@@ -269,6 +269,7 @@ const promptHooks = [];
 
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && k !== 'escape') return; // typing a name
   if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   if (k === 'escape' || k === 'p') {
     if (menu === 'map' && mapZoomOut()) return;
@@ -563,6 +564,7 @@ function syncScene() {
   // helmet light points where you're looking, a little down
   if (rover.driving) updateLights(world, up, _a.copy(rover.pos).addScaledVector(rover.fwd, 2).addScaledVector(up, 0.8), _c.copy(rover.pos).addScaledVector(rover.fwd, 22).addScaledVector(up, -1.5));
   else updateLights(world, up, _a.copy(player.pos).addScaledVector(up, 1.7), _c.copy(player.pos).addScaledVector(player.fwd, 14).addScaledVector(up, -2));
+  updateWeather(world); // after the sky and lights: weather thickens the haze and dims the light
   placeRoverMesh(1 / 60);
   if (rover.driving) { playerMesh.visible = false; playerLabel.visible = false; }
   // low sun: shadows get long, so the shadow area grows and moves the way they fall

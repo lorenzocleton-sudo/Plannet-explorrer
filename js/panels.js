@@ -97,7 +97,7 @@ function renderPanel() {
       <div class="row" style="margin-top:0"><button onclick="enterRover()">Drive</button></div>
       <p class="muted">INTERACT while driving to get out. The cab is pressurised: no oxygen loss, heat or cold inside.</p>`;
   } else {
-    h += `<h2>${t.def.name}</h2><p class="sub">${t.def.desc}</p>${powerLine(t)}${storageLine(t)}`;
+    h += `<h2>${t.def.name}</h2><p class="sub">${t.def.desc}</p>${t.type === 'beacon' ? beaconPanel(t) : powerLine(t) + storageLine(t)}`;
     const s = t.rec.s;
     if (t.type === 'drill') {
       const buf = s.buf || {};
