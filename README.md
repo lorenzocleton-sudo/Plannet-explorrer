@@ -37,3 +37,7 @@ Progress is saved automatically in your browser.
 - Every release is a whole number (**v1.0**, v2.0, …)
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+## Play online
+The game is deployed automatically to GitHub Pages on every push to `main`:
+**https://lorenzocleton-sudo.github.io/Plannet-explorrer/**
