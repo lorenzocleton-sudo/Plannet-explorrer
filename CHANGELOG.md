@@ -37,6 +37,12 @@
 ### Stage 6: lander visibility
 - The LANDER label and its radar marker only appear within 50 m of the lander; further away you have to find your own way back
 
+### Stage 7: interactive star map
+- The star map is now a live solar system: planets orbit the sun, locked ones are dimmed
+- Tap/click a planet to zoom in on it and see its moons orbiting (Umbros has 4, Glacia none)
+- Pick the planet or any of its moons as your destination; moons open up together with their planet
+- Atmosphere stays "unknown" on the map until you've landed there
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

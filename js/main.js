@@ -11,6 +11,7 @@ function frame(now) {
     renderer.render(world.scene, camera);
   }
   drawHUD(dt);
+  if (menu === 'map') drawStarMap(dt);
   requestAnimationFrame(frame);
 }
 resize();

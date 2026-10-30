@@ -44,6 +44,19 @@
   .opt select{background:#1f2750;color:#fff;border:1px solid #3b4a8a;border-radius:6px;padding:6px;font-size:14px}
   .opt input[type=checkbox]{width:20px;height:20px;justify-self:start}
   .opt .val{color:#7a86b8;font-size:12px;margin-left:6px}
+  .mappanel{max-width:1100px;height:88vh;display:flex;flex-direction:column;padding:14px 16px}
+  .maphead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .maphead h2{margin:0}
+  .maphead button{padding:8px 14px;font-size:14px}
+  .mapwrap{flex:1;display:flex;gap:12px;min-height:0}
+  #mapCanvas{flex:1;min-width:0;background:#03040a;border-radius:10px;touch-action:none;cursor:pointer}
+  #mapInfo{width:290px;overflow:auto}
+  #mapInfo .mcard{background:#161c3a;border:1px solid #27305e;border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer}
+  #mapInfo .mcard.sel{border-color:#9fd8ff;background:#1b2550}
+  #mapInfo .mcard b{font-size:15px}
+  #mapInfo .mcard p{margin:4px 0;font-size:13px}
+  #mapInfo button{padding:7px 14px;font-size:14px;margin-top:4px}
+  @media (max-width:760px),(max-height:520px) and (orientation:portrait){.mapwrap{flex-direction:column}#mapInfo{width:auto;max-height:40%}}
   #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:calc(100% - 360px);min-width:240px}
   .toast{background:rgba(16,20,42,.92);border:1px solid #3b4a8a;border-radius:8px;padding:6px 14px;font-size:14px;transition:opacity .5s;text-align:center}
   .toast.new{border-color:#ffd166;color:#ffe3a1}
@@ -149,7 +162,18 @@
 </div>
 
 <div class="overlay" id="codex"><div class="panel" id="codexBody"></div></div>
-<div class="overlay" id="starmap"><div class="panel" id="mapBody"></div></div>
+<div class="overlay" id="starmap">
+  <div class="panel mappanel">
+    <div class="maphead">
+      <h2 id="mapTitle">Star Map</h2>
+      <span class="muted" id="mapRP"></span>
+      <span style="flex:1"></span>
+      <button class="ghost" id="mapBackBtn">◀ Solar system</button>
+      <button class="ghost" id="mapClose">Close</button>
+    </div>
+    <div class="mapwrap"><canvas id="mapCanvas"></canvas><div id="mapInfo"></div></div>
+  </div>
+</div>
 
 <script src="lib/three.min.js"></script>
 <script src="js/util.js"></script>
@@ -160,6 +184,7 @@
 <script src="js/mining.js"></script>
 <script src="js/terraform.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/starmap.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

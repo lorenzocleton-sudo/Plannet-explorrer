@@ -144,28 +144,6 @@ function atmoText(b) {
   if (!save.atmo[b.id]) return 'Atmosphere: unknown';
   return b.breathable ? 'Atmosphere: breathable' : 'No breathable oxygen';
 }
-function renderMap() {
-  let h = `<h2>Star Map</h2><p class="sub">Research Points: <b>${save.rp}</b> — spend them to unlock new worlds. Moons open up with their planet.</p><div class="planets">`;
-  PLANETS.forEach(P => {
-    const [hh, s, l] = P.col.plains, [ch, cs, cl] = P.col.crystal;
-    const orb = `background:radial-gradient(circle at 35% 35%, hsl(${hh},${s}%,${l + 18}%), hsl(${hh},${s}%,${l}%) 55%, hsl(${ch},${cs}%,${cl - 20}%))`;
-    const unlocked = isUnlocked(P);
-    let btn;
-    if (P.id === save.current) btn = `<button disabled>You are here</button>`;
-    else if (unlocked) btn = `<button onclick="travel('${P.id}')">Land</button>`;
-    else btn = `<button ${save.rp >= P.cost ? '' : 'disabled'} onclick="unlock(${P.idx})">Unlock · ${P.cost} RP</button>`;
-    let moons = P.moons.length ? '' : '<p class="muted">No moons</p>';
-    for (const M of P.moons) {
-      moons += `<p>${M.name} · g ${M.g} · ${M.id === save.current ? '<b>here</b>' : unlocked ? `<button class="ghost" style="padding:4px 10px" onclick="travel('${M.id}')">Land</button>` : 'locked'}</p>`;
-    }
-    h += `<div class="pcard ${P.id === save.current ? 'cur' : ''}"><div class="orb" style="${orb}"></div>
-      <b>${P.name}</b>
-      <p class="muted">${P.desc}</p>
-      <p>Gravity ${P.g} m/s² · ${atmoText(P)}</p>${btn}${moons}</div>`;
-  });
-  h += `</div><div class="row"><button class="ghost" onclick="goBack()">Close</button></div>`;
-  $('mapBody').innerHTML = h;
-}
 function unlock(i) {
   const P = PLANETS[i];
   if (save.rp < P.cost || save.unlocked.includes(i)) return;
@@ -173,7 +151,7 @@ function unlock(i) {
   save.unlocked.push(i);
   writeSave();
   toast(`${P.name} unlocked!`, 'new');
-  renderMap();
+  renderMapInfo();
 }
 function travel(id) {
   const b = bodyById(id);

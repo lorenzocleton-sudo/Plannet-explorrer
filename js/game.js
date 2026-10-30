@@ -202,6 +202,7 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   if (k === 'escape' || k === 'p') {
+    if (menu === 'map' && mapZoomOut()) return;
     if (menu === null) showMenu('pause');
     else if (menu === 'pause' && performance.now() - lastAutoPause < 300) {} // pointer-lock exit already paused
     else goBack();
