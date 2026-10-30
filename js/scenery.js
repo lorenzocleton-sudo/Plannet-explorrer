@@ -36,6 +36,7 @@ const SCN = { tiles: new Map(), level: 0, queue: [], last: new THREE.Vector3(1e9
 
 function initScenery(w) {
   buildModels();
+  buildImpostors();
   SCN.tiles.clear(); SCN.queue = []; SCN.meshes.clear(); SCN.colliders = []; SCN.last.set(1e9, 0, 0); SCN.dirty = true;
   SCN.level = Math.round(Math.log2(w.R * Math.PI / 2 / 20));
   SCN.group = new THREE.Group();
@@ -107,8 +108,7 @@ function genTile(w, f, x, y) {
       // tint: plants take the biome colour, rocks the planet's rock colour
       const tint = isGrass || !ROCKY.has(kind) ? floraTint(body, gw.length ? gw[k00] : null, rnd, kind) : rockTint(body, rnd);
       const it = { kind, vi, mat, tint, pos, big: !isGrass, far: K.far || 1 };
-      if (K.coll) it.coll = K.coll * s;
-      if (K.arch) it.legs = [-0.5, 0.5].map(t => pos.clone().addScaledVector(_st.set(t * s, 0, 0).applyQuaternion(_sq), 1)), it.coll = 0.13 * s;
+      it.colls = sceneryColliders(kind, K, variants[vi], pos, _sq, s, _ss.y);
       out.push(it);
     }
   }
@@ -149,6 +149,7 @@ function wantedTiles(w, radius) {
 function updateScenery(w, budgetMs = 3) {
   if (!SCN.group) return;
   NATURE_U.uTime.value = performance.now() / 1000 % 10000;
+  if (IMP.mat) IMP.mat.userData.U.uLight.value = clamp(w.ambient.intensity * 1.1 + w.sun.intensity * 0.75, 0.05, 1.2);
   const D = detail();
   const moved = SCN.last.distanceTo(player.pos);
   if (moved > 5 || SCN.dirty) {
@@ -167,21 +168,30 @@ function updateScenery(w, budgetMs = 3) {
   }
   if (SCN.dirty) { rebuildInstances(w); SCN.dirty = false; }
 }
-function bucket(kind, vi, lo) {
-  const key = kind + vi + (lo ? 'L' : 'H');
+// one instanced mesh per model, detail level and quarter around the player (quarters behind the
+// camera are frustum-culled as a whole: each mesh gets a bounding sphere around its instances)
+function bucket(kind, vi, lo, quad) {
+  const key = kind + vi + (lo ? 'L' : 'H') + quad;
   let B = SCN.meshes.get(key);
   if (!B) {
     const K = KINDS[kind], src = MODELS[K.model || kind][vi][lo ? 'lo' : 'hi'];
     const near = (K.far || 1) < 1;
     const mat = ROCKY.has(kind) ? (near ? ROCK_NEAR_MAT : ROCK_MAT) : (kind === 'grass' || kind === 'aliengrass') ? GRASS_MAT : (near ? FOLIAGE_NEAR_MAT : FOLIAGE_MAT);
-    B = { key, src, mat, list: [], mesh: null, cap: 0, shadow: !lo && kind !== 'grass' && kind !== 'aliengrass' && kind !== 'rock' };
+    // a geometry of our own (sharing the model's buffers) so this mesh can have its own bounds
+    const geo = new THREE.BufferGeometry();
+    geo.index = src.index;
+    for (const a in src.attributes) geo.setAttribute(a, src.attributes[a]);
+    B = { key, src, geo, mat, list: [], mesh: null, cap: 0, rad: src.boundingSphere.radius, shadow: !lo && kind !== 'grass' && kind !== 'aliengrass' && kind !== 'rock' };
     SCN.meshes.set(key, B);
   }
   return B;
 }
+const _bs = new THREE.Box3();
 function rebuildInstances(w) {
-  const D = detail(), P = player.pos;
+  const D = detail(), P = player.pos, up = player.up, t1 = tangentOf(up, _sd), impD = D.loD * 1.7;
+  const t2x = up.y * t1.z - up.z * t1.y, t2y = up.z * t1.x - up.x * t1.z, t2z = up.x * t1.y - up.y * t1.x;
   for (const B of SCN.meshes.values()) B.list.length = 0;
+  const impList = [];
   SCN.colliders.length = 0;
   const builds = w.buildings || [];
   for (const items of SCN.tiles.values()) for (const it of items) {
@@ -191,33 +201,70 @@ function rebuildInstances(w) {
     let blocked = false;
     for (const b of builds) if (b.pos.distanceTo(it.pos) < b.def.fp + (it.big ? 1.5 : 0.4)) { blocked = true; break; }
     if (blocked) continue;
+    if (it.colls && d < 45) for (const c of it.colls) SCN.colliders.push(c);
+    if (it.big && d > impD && IMP.tex && IMP.cells[it.kind + it.vi]) { impList.push(it); continue; }
     const lo = it.big ? d > D.loD : d > D.grassR * 0.55;
-    bucket(it.kind, it.vi, lo).list.push(it);
-    if (it.coll && d < 40) {
-      if (it.legs) for (const l of it.legs) SCN.colliders.push({ pos: l, r: it.coll });
-      else SCN.colliders.push({ pos: it.pos, r: it.coll });
-    }
+    const dx = it.pos.x - P.x, dy = it.pos.y - P.y, dz = it.pos.z - P.z;
+    // only grass (thousands of copies) is split into quarters; for the rest the extra draw calls cost more than they save
+    const quad = it.big ? 0 : (dx * t1.x + dy * t1.y + dz * t1.z > 0 ? 1 : 0) + (dx * t2x + dy * t2y + dz * t2z > 0 ? 2 : 0);
+    bucket(it.kind, it.vi, lo, quad).list.push(it);
   }
   for (const B of SCN.meshes.values()) {
     const n = B.list.length;
     if (n > B.cap) { // grow the instanced mesh
       if (B.mesh) { SCN.group.remove(B.mesh); B.mesh.dispose(); }
       B.cap = Math.max(16, Math.ceil(n * 1.5));
-      B.mesh = new THREE.InstancedMesh(B.src, B.mat, B.cap);
+      B.mesh = new THREE.InstancedMesh(B.geo, B.mat, B.cap);
       B.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(B.cap * 3), 3);
-      B.mesh.frustumCulled = false;
       B.mesh.castShadow = B.shadow && D.treeShadows;
       B.mesh.receiveShadow = true;
       SCN.group.add(B.mesh);
     }
     if (!B.mesh) continue;
     const im = B.mesh.instanceMatrix.array, ic = B.mesh.instanceColor.array;
-    for (let i = 0; i < n; i++) { im.set(B.list[i].mat, i * 16); ic.set(B.list[i].tint, i * 3); }
+    _bs.makeEmpty();
+    let maxS = 1;
+    for (let i = 0; i < n; i++) {
+      const it = B.list[i];
+      im.set(it.mat, i * 16); ic.set(it.tint, i * 3);
+      _bs.expandByPoint(it.pos);
+      maxS = Math.max(maxS, Math.abs(it.mat[5]) + Math.abs(it.mat[4]) + Math.abs(it.mat[6]));
+    }
     B.mesh.count = n;
+    B.mesh.visible = n > 0;
+    if (n) { B.geo.boundingSphere = B.geo.boundingSphere || new THREE.Sphere(); _bs.getBoundingSphere(B.geo.boundingSphere); B.geo.boundingSphere.radius += B.rad * maxS; }
     B.mesh.instanceMatrix.needsUpdate = true;
     B.mesh.instanceColor.needsUpdate = true;
   }
+  rebuildImpostors(impList, D);
   sceneryFade();
+}
+// far trees: one instanced mesh of camera-facing cut-outs for all kinds
+function rebuildImpostors(list, D) {
+  const n = list.length;
+  if (!IMP.tex) return;
+  let M = SCN.imp;
+  if (!M || n > M.cap) {
+    if (M && M.mesh) { SCN.group.remove(M.mesh); M.mesh.dispose(); }
+    const cap = Math.max(64, Math.ceil(n * 1.5)), geo = new THREE.BufferGeometry();
+    geo.index = IMP.geo.index;
+    for (const a in IMP.geo.attributes) geo.setAttribute(a, IMP.geo.attributes[a]);
+    geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(new Float32Array(cap * 4), 4));
+    const mesh = new THREE.InstancedMesh(geo, IMP.mat, cap);
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
+    mesh.frustumCulled = false;
+    SCN.group.add(mesh);
+    M = SCN.imp = { mesh, cap, geo };
+  }
+  const im = M.mesh.instanceMatrix.array, ic = M.mesh.instanceColor.array, ac = M.geo.attributes.aCell.array;
+  for (let i = 0; i < n; i++) {
+    const it = list[i], cell = IMP.cells[it.kind + it.vi];
+    im.set(it.mat, i * 16); ic.set(it.tint, i * 3);
+    ac[i * 4] = cell.u; ac[i * 4 + 1] = cell.v; ac[i * 4 + 2] = cell.w; ac[i * 4 + 3] = cell.y0;
+  }
+  M.mesh.count = n;
+  M.mesh.instanceMatrix.needsUpdate = M.mesh.instanceColor.needsUpdate = M.geo.attributes.aCell.needsUpdate = true;
+  IMP.mat.userData.U.uFadeFar.value = D.treeR;
 }
 // fade distances per material (grass close, small things mid-way, trees and big rocks far)
 function sceneryFade() {
@@ -228,21 +275,47 @@ function sceneryFade() {
   ROCK_NEAR_MAT.userData.U.uFadeFar.value = D.treeR * 0.45;
 }
 
-// ---- collisions: trunks, boulders and pillars push the player out ----
-function collideScenery(pos, up) {
+// ---- collisions ----
+// Every tree trunk, rock, boulder, slab, pillar and arch leg is a short upright cylinder: from the
+// side it pushes you out, and low rocks (top within a step or a jump) can be climbed and stood on.
+const NO_TOP = 1e6;
+function sceneryColliders(kind, K, model, pos, q, s, sy) {
+  const out = [], base = pos.length(), add = (p, r, top) => out.push({ pos: p, r, top, base });
+  if (K.coll && !ROCKY.has(kind)) add(pos, K.coll * s, NO_TOP);                 // trunks, cacti, mushroom stems
+  else if (kind === 'pillar') add(pos, 0.13 * s, NO_TOP);
+  else if (kind === 'arch') for (const t of [-0.5, 0.5]) add(pos.clone().add(_st.set(t * s, 0, 0).applyQuaternion(q)), 0.14 * s, NO_TOP);
+  else if (ROCKY.has(kind)) {
+    const e = model.ext, top = e.top * sy;
+    if (top < 0.3) return null;                                                 // pebbles: just step over them
+    if (kind === 'slab') // long rocks: three overlapping circles along their length
+      for (const t of [-0.6, 0, 0.6]) add(pos.clone().add(_st.set(0, 0, t * e.rz * s).applyQuaternion(q)), e.rx * s * 0.9, top);
+    else add(pos, Math.max(e.rx, e.rz) * s * 0.85, top);
+  }
+  return out.length ? out : null;
+}
+// call with the player's position before ground contact: pushes out of anything you walk into and
+// returns the radius of the top of a rock you are standing on (0 if none)
+function sceneryContact(pos, up) {
+  let floor = 0;
   for (const c of SCN.colliders) {
     _st.subVectors(pos, c.pos);
-    _st.addScaledVector(up, -_st.dot(up)); // horizontal distance only
-    const d = _st.length(), r = c.r + 0.35;
-    if (d < r && d > 1e-4) {
-      pos.addScaledVector(_st, (r - d) / d);
-      const vn = player.vel.dot(_st) / d;
-      if (vn < 0) player.vel.addScaledVector(_st, -vn / d);
-    }
+    const h = _st.dot(up);
+    _st.addScaledVector(up, -h); // horizontal offset
+    const d = _st.length(), r = c.r + 0.3;
+    if (d >= r) continue;
+    if (h >= c.top - 0.45) { floor = Math.max(floor, c.base + c.top); continue; } // on top (or stepping up)
+    if (h < -1) continue;                                                          // well below it (caves, overhangs)
+    if (d < 1e-4) tangentOf(up, _st).multiplyScalar(1e-4); // dead centre: push out any way
+    const dd = Math.max(d, 1e-4);
+    pos.addScaledVector(_st, (r - dd) / dd);
+    const vn = player.vel.dot(_st) / dd;
+    if (vn < 0) player.vel.addScaledVector(_st, -vn / dd);
   }
+  return floor;
 }
 
 function disposeScenery() {
   for (const B of SCN.meshes.values()) if (B.mesh) B.mesh.dispose();
   SCN.meshes.clear(); SCN.tiles.clear(); SCN.group = null;
+  if (SCN.imp) { SCN.imp.mesh.dispose(); SCN.imp = null; }
 }

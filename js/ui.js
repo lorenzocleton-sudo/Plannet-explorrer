@@ -60,7 +60,7 @@ function renderPause() {
 }
 
 // ---------- options ----------
-const OPT_IDS = ['oSens', 'oInvert', 'oDist', 'oFov', 'oLabels', 'oMinimap', 'oFps', 'oQuality', 'oShadows'];
+const OPT_IDS = ['oSens', 'oInvert', 'oDist', 'oFov', 'oLabels', 'oMinimap', 'oQuality', 'oShadows'];
 function renderOptions() {
   $('oSens').value = opts.sens; $('vSens').textContent = opts.sens.toFixed(1);
   $('oInvert').checked = opts.invert;
@@ -68,7 +68,6 @@ function renderOptions() {
   $('oFov').value = opts.fov; $('vFov').textContent = opts.fov + '°';
   $('oLabels').value = opts.labels;
   $('oMinimap').checked = opts.minimap;
-  $('oFps').checked = opts.fps;
   $('oQuality').value = opts.quality;
   $('oShadows').checked = opts.shadows;
   $('oDebug').checked = opts.debug;
@@ -81,7 +80,6 @@ function optChanged() {
   opts.fov = +$('oFov').value;
   opts.labels = $('oLabels').value;
   opts.minimap = $('oMinimap').checked;
-  opts.fps = $('oFps').checked;
   opts.quality = $('oQuality').value;
   opts.shadows = $('oShadows').checked;
   writeOpts(); applyGraphics(); renderOptions();
@@ -393,7 +391,7 @@ function drawHUD(dt) {
     hx.fillStyle = '#111'; hx.fillText(t, 18, VH - 41);
   }
   hx.fillStyle = 'rgba(255,255,255,.45)'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'bottom';
-  hx.fillText(`Planet Explorer v${VERSION}` + (isTouch ? '' : ' · [Esc] Pause · [C] Codex') + (opts.fps ? ` · ${Math.round(fps)} FPS` : ''), 10, VH - 8);
+  hx.fillText(`Planet Explorer v${VERSION}` + (isTouch ? '' : ' · [Esc] Pause · [C] Codex') + (debugOn() ? ` · ${Math.round(fps)} FPS · ${Math.round(resScale * 100)}% res` : ''), 10, VH - 8);
   if (!isTouch && !document.pointerLockElement && !menu) {
     hx.textAlign = 'center'; hx.textBaseline = 'middle'; hx.font = '13px system-ui,sans-serif';
     hx.fillStyle = 'rgba(255,255,255,.6)'; hx.fillText('Click to capture the mouse for camera control', VW / 2, VH - 150);

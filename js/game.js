@@ -386,8 +386,12 @@ function update(dt) {
     // ground contact (gravity always points to the centre)
     nu.copy(player.pos).normalize();
     const gh = groundH(nu);
-    const floorR = world.hasSea ? Math.max(R + gh, R - 1.0) : R + gh;
-    player.inLiquid = world.hasSea && gh < -0.3;
+    let floorR = world.hasSea ? Math.max(R + gh, R - 1.0) : R + gh;
+    // rocks and trees: bump into them, or stand on top of a low rock
+    const rockTop = sceneryContact(player.pos, nu);
+    if (rockTop > floorR) floorR = rockTop;
+    nu.copy(player.pos).normalize();
+    player.inLiquid = world.hasSea && gh < -0.3 && rockTop === 0;
     const r0 = player.pos.length();
     if (r0 <= floorR || (player.onGround && r0 - floorR < 0.6 && vr <= 0.5)) {
       if (!player.onGround) {
@@ -400,7 +404,6 @@ function update(dt) {
       if (vrn < 0) player.vel.addScaledVector(nu, -vrn);
       player.onGround = true;
       player.fallTop = floorR;
-      collideScenery(player.pos, nu);
     } else {
       player.onGround = false;
       player.fallTop = Math.max(player.fallTop, r0);
@@ -553,7 +556,7 @@ function syncScene() {
   // helmet light points where you're looking, a little down
   updateLights(world, up, _a.copy(player.pos).addScaledVector(up, 1.7), _c.copy(player.pos).addScaledVector(player.fwd, 14).addScaledVector(up, -2));
   // low sun: shadows get long, so the shadow area grows and moves the way they fall
-  const sa = up.dot(world.sunDir), low = 1 - smooth(0.08, 0.45, sa), half = 45 + low * 45;
+  const sa = up.dot(world.sunDir), low = 1 - smooth(0.08, 0.45, sa), half = detail().shadowR * (1 + low);
   const sc = world.sun.shadow.camera;
   if (Math.abs(sc.right - half) > 1) { sc.left = sc.bottom = -half; sc.right = sc.top = half; sc.updateProjectionMatrix(); }
   _a.copy(world.sunDir).addScaledVector(up, -sa);

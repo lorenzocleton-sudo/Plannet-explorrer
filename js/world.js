@@ -286,6 +286,32 @@ function placeOnSurface(obj, up, r, spin = 0) {
   if (spin) obj.quaternion.multiply(_q2.setFromAxisAngle(Y_AXIS, spin));
 }
 
+// merge a group's static parts into one mesh per material (fewer draw calls); `keep` stay separate
+function mergeStatic(g, keep = []) {
+  const byMat = new Map();
+  g.updateMatrixWorld(true);
+  for (const o of [...g.children]) {
+    if (!o.isMesh || keep.includes(o)) continue;
+    const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    geo.applyMatrix4(o.matrix);
+    if (!byMat.has(o.material)) byMat.set(o.material, []);
+    byMat.get(o.material).push(geo);
+    g.remove(o);
+    o.geometry.dispose();
+  }
+  for (const [mat, geos] of byMat) {
+    const n = geos.reduce((a, x) => a + x.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3);
+    let k = 0;
+    for (const x of geos) { pos.set(x.attributes.position.array, k * 3); nor.set(x.attributes.normal.array, k * 3); k += x.attributes.position.count; x.dispose(); }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = true;
+    g.add(m);
+  }
+}
+
 // ---------- lander ----------
 function makeLander() {
   const g = new THREE.Group();
@@ -318,6 +344,7 @@ function makeLander() {
     g.add(leg, pad);
   }
   g.traverse(o => { o.castShadow = true; });
+  mergeStatic(g, [beacon, flame, win]);
   return { group: g, beacon, flame };
 }
 

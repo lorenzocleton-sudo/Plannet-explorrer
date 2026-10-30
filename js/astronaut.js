@@ -6,7 +6,7 @@ const ASTRO = { model: null, mixer: null, actions: {}, current: null, ready: fal
 
 function loadAstronaut() {
   if (!THREE.GLTFLoader) return;
-  new THREE.GLTFLoader().load('assets/models/astronaut.glb?v=0.6', gltf => {
+  new THREE.GLTFLoader().load(`assets/models/astronaut.glb?v=${ASSET_V}`, gltf => {
     const m = gltf.scene;
     // scale to 1.8 m tall, feet on the ground, facing +Z like the old shape
     const box = new THREE.Box3().setFromObject(m), h = box.max.y - box.min.y;

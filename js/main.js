@@ -13,7 +13,7 @@ function frame(now) {
   }
 }
 function step(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const raw = (now - last) / 1000, dt = Math.min(0.05, raw);
   last = now;
   fps += ((1 / Math.max(dt, 0.001)) - fps) * 0.05;
   if (cutscene) {
@@ -25,7 +25,8 @@ function step(now) {
     if (!menu || menu === 'machine' || menu === 'build') factoryTick(dt);
     panelTick(dt);
     syncScene();
-    renderer.render(world.scene, camera);
+    if (!window.NO_RENDER) renderer.render(world.scene, camera); // NO_RENDER: automated tests only
+    adaptResolution(raw);
   }
   if (!cutscene) drawHUD(dt);
   if (menu === 'map') drawStarMap(dt);
@@ -49,6 +50,7 @@ function showFatal(err, starting = false) {
   document.body.appendChild(d);
 }
 resize();
+initTerrainWorkers();
 loadGroundTextures(detail().texSize);
 loadAstronaut();
 requestAnimationFrame(frame); // start the loop first so menus and HUD work even if landing fails

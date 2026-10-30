@@ -37,7 +37,7 @@ function loadGroundTextures(size) {
   const c = document.createElement('canvas'); c.width = c.height = size;
   const x = c.getContext('2d', { willReadFrequently: true });
   const col = new Uint8Array(size * size * 4 * NL), nrm = new Uint8Array(size * size * 4 * NL);
-  return Promise.all(GROUND_LAYERS.map((n, i) => Promise.all([load(`assets/textures/${n}_col.jpg?v=0.6`), load(`assets/textures/${n}_nrm.jpg?v=0.6`)]).then(([a, b]) => {
+  return Promise.all(GROUND_LAYERS.map((n, i) => Promise.all([load(`assets/textures/${n}_col.jpg?v=${ASSET_V}`), load(`assets/textures/${n}_nrm.jpg?v=${ASSET_V}`)]).then(([a, b]) => {
     x.drawImage(a, 0, 0, size, size);
     const d = x.getImageData(0, 0, size, size).data;
     col.set(d, i * size * size * 4);

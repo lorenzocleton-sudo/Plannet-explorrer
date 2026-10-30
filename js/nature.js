@@ -70,7 +70,7 @@ function blob(b, cx, cy, cz, rx, ry, rz, seed, rough, col, colTop, sway, glow = 
     }
     idx.push(row);
   }
-  for (let j = 0; j < rows; j++) for (let i = 0; i < seg; i++) b.quad(idx[j][i], idx[j + 1][i], idx[j + 1][(i + 1) % seg], idx[j][(i + 1) % seg]);
+  for (let j = 0; j < rows; j++) for (let i = 0; i < seg; i++) b.quad(idx[j][i], idx[j][(i + 1) % seg], idx[j + 1][(i + 1) % seg], idx[j + 1][i]); // wound so faces point outwards
 }
 // a flat leaf/blade strip from root along a bent path (double sided via the material)
 function strip(b, root, dir, len, w0, w1, bend, segs, col0, col1, swayK = 1, glow = 0) {
@@ -208,7 +208,7 @@ function makeAlienShroom(seed, lo) { // giant umbrella mushroom
     for (let s = 0; s < seg; s++) { const a = s / seg * Math.PI * 2, wob = 1 + Math.sin(a * 5 + seed) * 0.05; ring.push(b.v(Math.cos(a) * rr * wob, y, Math.sin(a) * rr * wob, cap, 0.25, 0)); }
     rings.push(ring);
   }
-  for (let j = 0; j < rows; j++) for (let s = 0; s < seg; s++) b.quad(rings[j][s], rings[j + 1][s], rings[j + 1][(s + 1) % seg], rings[j][(s + 1) % seg]);
+  for (let j = 0; j < rows; j++) for (let s = 0; s < seg; s++) b.quad(rings[j][s], rings[j][(s + 1) % seg], rings[j + 1][(s + 1) % seg], rings[j + 1][s]);
   // glowing gills underneath the cap rim
   const last = rings[rows], gills = last.map(k => b.v(b.p[k * 3], b.p[k * 3 + 1] - 0.03, b.p[k * 3 + 2], under, 0.25, 0.8));
   const gc = b.v(0, H + 0.15, 0.1, under, 0.25, 1);
@@ -245,7 +245,7 @@ function makeRock(seed, detail, elong = 1, flat = 0.75) {
     }
     idx.push(row);
   }
-  for (let j = 0; j < rows; j++) for (let i = 0; i < seg; i++) b.quad(idx[j][i], idx[j + 1][i], idx[j + 1][(i + 1) % seg], idx[j][(i + 1) % seg]);
+  for (let j = 0; j < rows; j++) for (let i = 0; i < seg; i++) b.quad(idx[j][i], idx[j][(i + 1) % seg], idx[j + 1][(i + 1) % seg], idx[j + 1][i]); // wound so faces point outwards
   return b.geo();
 }
 function makePillar(seed, lo) { // tall eroded rock pillar
@@ -364,7 +364,13 @@ function buildModels() {
     slab: [1, 2].map(s => ({ hi: makeRock(300 + s, 16, 2.4, 0.6), lo: makeRock(300 + s, 8, 2.4, 0.6) })),
     pillar: two(makePillar, [401, 402]), arch: two(makeArch, [501, 502]),
   });
-  for (const k in MODELS) for (const v of MODELS[k]) { sharedGeos.add(v.hi); sharedGeos.add(v.lo); }
+  for (const k in MODELS) for (const v of MODELS[k]) {
+    sharedGeos.add(v.hi); sharedGeos.add(v.lo);
+    // size of the model, used for collisions: half-widths and height
+    v.hi.computeBoundingBox();
+    const bb = v.hi.boundingBox;
+    v.ext = { rx: Math.max(-bb.min.x, bb.max.x), rz: Math.max(-bb.min.z, bb.max.z), top: bb.max.y };
+  }
   MODELS.ready = true;
 }
 
@@ -416,3 +422,73 @@ Object.assign(GEO, {
   fossil: makeAmmonite(), dust: makeMound(), ice: makeIceChunk(),
 });
 Object.values(GEO).forEach(g => sharedGeos.add(g));
+
+// ---- impostors: far-away trees as flat cut-outs ----
+// Each tree model is photographed once from the side into an atlas. Far trees are then drawn as
+// camera-facing quads (2 triangles instead of hundreds), turning around their own "up".
+const IMP_KINDS = ['conifer', 'broadleaf', 'swamptree', 'deadtree', 'cactus', 'shroom'], IMP_GRID = 4;
+const IMP = { tex: null, cells: {}, mat: null, geo: null };
+function buildImpostors() {
+  if (IMP.tex || !MODELS.ready) return;
+  const S = 1024, cell = S / IMP_GRID;
+  const rt = new THREE.WebGLRenderTarget(S, S, { depthBuffer: true });
+  const scene = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+  const key = new THREE.DirectionalLight(0xffffff, 0.75);
+  key.position.set(0.4, 1, 0.9);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55), key);
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(undefined, mat);
+  scene.add(mesh);
+  const prev = { target: renderer.getRenderTarget(), color: renderer.getClearColor(new THREE.Color()), alpha: renderer.getClearAlpha(), auto: renderer.autoClear };
+  renderer.setRenderTarget(rt);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
+  renderer.autoClear = false;
+  let n = 0;
+  for (const k of IMP_KINDS) MODELS[k].forEach((v, vi) => {
+    const bb = v.hi.boundingBox || (v.hi.computeBoundingBox(), v.hi.boundingBox);
+    const w = Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z) * 1.05, h = bb.max.y * 1.02, y0 = Math.min(0, bb.min.y);
+    mesh.geometry = v.hi;
+    const half = Math.max(w, (h - y0) / 2);
+    Object.assign(cam, { left: -half, right: half, bottom: y0, top: y0 + half * 2 });
+    cam.position.set(0, 0, 50); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
+    const cx = n % IMP_GRID, cy = Math.floor(n / IMP_GRID);
+    rt.viewport.set(cx * cell, cy * cell, cell, cell);
+    rt.scissor.set(cx * cell, cy * cell, cell, cell);
+    rt.scissorTest = true;
+    renderer.setRenderTarget(rt);
+    renderer.render(scene, cam);
+    IMP.cells[k + vi] = { u: cx / IMP_GRID, v: cy / IMP_GRID, w: half, h: half * 2, y0 };
+    n++;
+  });
+  renderer.autoClear = prev.auto;
+  renderer.setRenderTarget(prev.target);
+  renderer.setClearColor(prev.color, prev.alpha);
+  IMP.tex = rt.texture;
+  IMP.geo = new THREE.PlaneGeometry(2, 2).translate(0, 1, 0); // x -1..1, y 0..2; scaled per instance in the shader
+  IMP.mat = new THREE.MeshBasicMaterial({ map: IMP.tex, alphaTest: 0.5, side: THREE.DoubleSide, transparent: false });
+  IMP.mat.userData.U = Object.assign(fadeU(300), { uLight: { value: 1 } });
+  IMP.mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, IMP.mat.userData.U);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>
+attribute vec4 aCell; // atlas u, v, half-width, height offset
+uniform float uFadeFar;`)
+      .replace('#include <uv_vertex>', `#include <uv_vertex>
+vUv = aCell.xy + uv * ${(1 / IMP_GRID).toFixed(4)};`)
+      .replace('#include <project_vertex>', `
+vec3 iPos = (modelMatrix * vec4(instanceMatrix[3].xyz, 1.0)).xyz;
+vec3 iUp = normalize(instanceMatrix[1].xyz);
+float iS = length(instanceMatrix[1].xyz) * aCell.z * smoothstep(uFadeFar, uFadeFar * 0.85, length(iPos - cameraPosition));
+vec3 toCam = normalize(cameraPosition - iPos);
+vec3 right = normalize(cross(iUp, toCam));
+vec3 wp = iPos + right * position.x * iS + iUp * (position.y * iS + aCell.w * length(instanceMatrix[1].xyz));
+vec4 mvPosition = viewMatrix * vec4(wp, 1.0);
+gl_Position = projectionMatrix * mvPosition;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uLight;')
+      .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb *= uLight;');
+  };
+  IMP.mat.customProgramCacheKey = () => 'impostor1';
+  sharedMats.add(IMP.mat); sharedGeos.add(IMP.geo);
+}

@@ -138,11 +138,11 @@ function makeClouds(body, Rc) {
 // ---------- sun + day/night ----------
 // Each world spins once per body.dayLen seconds around a slightly tilted axis. Instead of turning
 // the terrain we turn the sky the other way, which looks the same from the ground.
-const _q3 = new THREE.Quaternion(), _p1 = new THREE.Vector3(), _p2 = new THREE.Vector3();
+const _q3 = new THREE.Quaternion(), _p1 = new THREE.Vector3(), _p2 = new THREE.Vector3(), _p3 = new THREE.Vector3();
 function signedAngle(a, b, axis) {
   _p1.copy(a).addScaledVector(axis, -a.dot(axis)).normalize();
   _p2.copy(b).addScaledVector(axis, -b.dot(axis)).normalize();
-  return Math.atan2(_p1.clone().cross(_p2).dot(axis), _p1.dot(_p2));
+  return Math.atan2(_p3.copy(_p1).cross(_p2).dot(axis), _p1.dot(_p2));
 }
 function initDayCycle(w) {
   const B = w.body;

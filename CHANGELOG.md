@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7 (prompt 7: fixes, polish and new features)
+### Part 1 (steps 1–2)
+- **Fix: the astronaut and ground textures never reached the live site.** The deploy workflow only copied `index.html`, `lib/` and `js/`, so `assets/` (the astronaut model and all ground textures) was missing online and the game fell back to the old capsule and plain ground. It now deploys `assets/` too, and models and textures carry a version tag so browsers fetch fresh copies
+- **Fix: rocks could be walked and seen through.** Rocks, boulders and the mushroom caps were built inside-out (you saw their insides and lighting was reversed). They are solid from every side now, and every rock, boulder, slab, pillar and arch has proper collision; you can climb onto low rocks and stand on them
+- **Performance**: pixel ratio capped (1.0 Low, 1.25 Medium, 1.5 High) with dynamic resolution that lowers the image resolution when the frame rate drops below the goal (30 / 45 / 60 FPS) and raises it again when there is room; terrain is built in two background Web Workers, so walking into new land no longer stutters; shadows are only drawn near you (smaller area and map on Low); far trees are flat cut-outs (impostors) instead of full models; grass is frustum-culled in quarters; the lander's parts are merged into a few meshes; no more per-frame object creation in the hot paths
+- The FPS counter only shows in admin mode (with the current resolution scale)
+
+
 ## v0.6 (prompt 6: visual overhaul)
 ### Part 3 (steps 6–7)
 - **Sky**: the big planet balls are gone. Other planets are bright, star-like points that move with the sky. A planet's own moons are cratered globes at a realistic size (about 1.5° across) that orbit and show phases; by day only their sunlit side shows. From a moon, the parent planet hangs in the sky with phases and a glowing rim of air
