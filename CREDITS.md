@@ -15,6 +15,8 @@ Every asset in this repository is either CC0 / public domain, MIT-licensed code,
 |---|---|---|---|---|
 | `assets/models/astronaut.glb` | "Astronaut" (character "Barbara the Bee", with Idle, Walk, Run, Jump and other animations; the pistol it carries is hidden in game) | [Quaternius](https://quaternius.com/) | GitHub: [danvanderboom/Aetherium](https://github.com/danvanderboom/Aetherium) `samples/unity/Aphelion/Assets/ThirdParty/Quaternius/reclaimer-astronaut.glb` (commit `5763cd5`), originally from [poly.pizza/m/OgeSH89Nmx](https://poly.pizza/m/OgeSH89Nmx) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
+| `assets/models/trees/tree1.glb`, `tree2.glb`, `tree3.glb` | "CommonTree" 1, 2 and 4 from the Stylized Nature MegaKit | [Quaternius](https://quaternius.com/) | GitHub: [anshaneja5/skyline-run](https://github.com/anshaneja5/skyline-run) `public/assets/models/tree1-3.glb` (commit `0c41526`; licence text in `assets/models/trees/LICENSE-quaternius.txt`). The bark was simplified for tablets with meshoptimizer (`tools/simplify_trees.mjs`) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+
 ## Ground textures
 
 Photo textures are from [ambientCG](https://ambientcg.com/) (formerly CC0Textures), taken from the [jMonkeyEngine](https://github.com/jMonkeyEngine/jmonkeyengine) repository's test data, `jme3-testdata/src/main/resources/Textures/Terrain/PBR` (commit `34c4b4f`, whose `license.txt` records the CC0 source). They were resized to 512 px by `tools/make_textures.py`; the rock texture was also made grey so the game can tint it per planet.
@@ -33,6 +35,6 @@ Photo textures are from [ambientCG](https://ambientcg.com/) (formerly CC0Texture
 
 These have no third-party content. Poly Haven and Quaternius' own sites could not be reached from the build environment, so these are generated instead:
 
-- Trees, bushes, grass, alien plants, rocks, cliffs, arches and pillars: procedural meshes built at load time.
+- Bushes, grass, lichen, alien plants, bare trees, cacti, rocks, cliffs, arches and pillars: procedural meshes built at load time (the broadleaf trees are the Quaternius models above).
 - Sky, atmosphere colours, clouds, moons and stars: shaders and procedural textures.
 - Water: a shader with procedural waves and foam.

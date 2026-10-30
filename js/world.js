@@ -495,7 +495,7 @@ function spawnCell(w, key, f, x, y, n) {
       else if (b === 1) { if (r < 0.12) cat = 'rock'; }
       else { if (r < 0.14) cat = 'ice'; }
     }
-    if (!cat) continue;
+    if (!cat || (cat === 'plant' && !hasPlants(body))) continue;
     const sp = pickSpecies(sr, species[cat]);
     const s = sp.size / 12, dir = d.clone();
     const gr = R + (cat === 'plant' && w.hasSea ? Math.max(h, 0) : h);

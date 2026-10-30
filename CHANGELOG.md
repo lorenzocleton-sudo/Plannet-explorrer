@@ -1,6 +1,11 @@
 # Changelog
 
 ## v0.7 (prompt 7: fixes, polish and new features)
+### Part 2 (steps 3–4)
+- **Real trees**: Earth-like trees are now CC0 models (Quaternius Stylized Nature MegaKit), with their bark simplified for tablets; they sway in the wind, and from about 35 m they turn into cut-outs made from the same models
+- **Grass**: about 2.5× denser, lighter and softer blades, lit the same from both sides, and thinning out smoothly with distance
+- **Plants follow the chemistry**: Earth plants only grow on Verdara (Earth-like air and water). Glacia (breathable but frozen) has hardy grass, a few trees and bare trees. Ruska (CO₂ air, brine) has only sparse lichen crusts and the odd alien growth. Xeno Prime's sulfur haze grows alien plants only (alien grass, glowing bulbs, tube corals, giant mushrooms). Umbros and every moon have no air, so nothing grows there; their plant samples are gone from the world and the codex
+
 ### Part 1 (steps 1–2)
 - **Fix: the astronaut and ground textures never reached the live site.** The deploy workflow only copied `index.html`, `lib/` and `js/`, so `assets/` (the astronaut model and all ground textures) was missing online and the game fell back to the old capsule and plain ground. It now deploys `assets/` too, and models and textures carry a version tag so browsers fetch fresh copies
 - **Fix: rocks could be walked and seen through.** Rocks, boulders and the mushroom caps were built inside-out (you saw their insides and lighting was reversed). They are solid from every side now, and every rock, boulder, slab, pillar and arch has proper collision; you can climb onto low rocks and stand on them

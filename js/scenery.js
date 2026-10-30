@@ -8,13 +8,13 @@
 
 // what grows per biome: kind, density (per m²), size range, group ('grass' or 'big')
 const FLORA = {
-  [B_GRASS]: [['grass', 0.5], ['bush', 0.004], ['broadleaf', 0.0018], ['rock', 0.004]],
-  [B_FOREST]: [['grass', 0.18], ['broadleaf', 0.012], ['conifer', 0.008], ['bush', 0.008], ['rock', 0.003]],
+  [B_GRASS]: [['grass', 1.2], ['bush', 0.004], ['broadleaf', 0.0018], ['rock', 0.004]],
+  [B_FOREST]: [['grass', 0.45], ['broadleaf', 0.012], ['conifer', 0.008], ['bush', 0.008], ['rock', 0.003]],
   [B_DESERT]: [['cactus', 0.0015], ['drybush', 0.004], ['rock', 0.008], ['boulder', 0.0008], ['grass', 0.02]],
-  [B_HIGH]: [['rock', 0.012], ['boulder', 0.002], ['slab', 0.0006], ['conifer', 0.0018], ['grass', 0.08]],
-  [B_TUNDRA]: [['grass', 0.06], ['deadtree', 0.0012], ['conifer', 0.0025], ['rock', 0.006], ['boulder', 0.0005]],
-  [B_SWAMP]: [['grass', 0.38], ['swamptree', 0.0028], ['bush', 0.006], ['deadtree', 0.0008]],
-  [B_ALIEN]: [['aliengrass', 0.3], ['bulbs', 0.004], ['tubes', 0.005], ['shroom', 0.002], ['rock', 0.003]],
+  [B_HIGH]: [['rock', 0.012], ['boulder', 0.002], ['slab', 0.0006], ['conifer', 0.0018], ['grass', 0.2]],
+  [B_TUNDRA]: [['grass', 0.15], ['deadtree', 0.0012], ['conifer', 0.0025], ['rock', 0.006], ['boulder', 0.0005]],
+  [B_SWAMP]: [['grass', 0.9], ['swamptree', 0.0028], ['bush', 0.006], ['deadtree', 0.0008]],
+  [B_ALIEN]: [['aliengrass', 0.7], ['bulbs', 0.004], ['tubes', 0.005], ['shroom', 0.002], ['rock', 0.003]],
 };
 const MOON_FLORA = [['rock', 0.01], ['boulder', 0.0012], ['slab', 0.0003]];
 // planets with eroded pillars and arches in their dry, rocky or alien land
@@ -27,13 +27,29 @@ const KINDS = {
   swamptree: { s: [0.8, 1.3], coll: 0.3, up: 1 }, deadtree: { s: [0.8, 1.4], coll: 0.25, up: 1 },
   cactus: { s: [0.8, 1.4], coll: 0.35, up: 1, far: 0.6 },
   bulbs: { s: [0.8, 1.6], far: 0.6 }, tubes: { s: [0.8, 1.5], far: 0.6 }, shroom: { s: [0.8, 1.6], coll: 0.3, up: 1 },
+  lichen: { s: [0.4, 1.1], far: 0.45 },
   rock: { s: [0.15, 0.7], far: 0.45, tumble: 1 }, boulder: { s: [1.4, 4], coll: 0.75, tumble: 1, model: 'rock' },
   slab: { s: [3, 7], coll: 0.8, tumble: 0.4 }, pillar: { s: [10, 26], coll: 0.12, up: 1 }, arch: { s: [12, 24], up: 1, arch: 1 },
 };
 const ROCKY = new Set(['rock', 'boulder', 'slab', 'pillar', 'arch']);
+// each world's chemistry decides which of the biome plants can really grow there (null = none)
+const FLORA_SWAP = {
+  earth: { conifer: 'broadleaf', swamptree: 'broadleaf', bulbs: null, tubes: null, shroom: null, aliengrass: null },
+  earthCold: { swamptree: 'deadtree', cactus: null, drybush: 'bush', bulbs: null, tubes: null, shroom: null, aliengrass: null },
+  alienDry: { grass: 'lichen', bush: 'lichen', drybush: 'lichen', broadleaf: 'tubes', conifer: 'tubes', swamptree: 'bulbs', deadtree: null, cactus: 'tubes', aliengrass: 'lichen', shroom: null },
+  alienWet: { grass: 'aliengrass', bush: 'bulbs', drybush: 'bulbs', broadleaf: 'shroom', conifer: 'shroom', swamptree: 'shroom', deadtree: 'tubes', cactus: 'tubes' },
+  none: { grass: null, aliengrass: null, bush: null, drybush: null, broadleaf: null, conifer: null, swamptree: null, deadtree: null, cactus: null, bulbs: null, tubes: null, shroom: null },
+};
+// Ruska's lichen and growths are sparse: only a fraction of what an Earth-like biome would hold
+const FLORA_SCALE = { alienDry: 0.08 };
+const swapKind = (prof, k) => k in FLORA_SWAP[prof] ? FLORA_SWAP[prof][k] : k;
 
 const SCN = { tiles: new Map(), level: 0, queue: [], last: new THREE.Vector3(1e9, 0, 0), meshes: new Map(), colliders: [], dirty: true };
 
+function resetSceneryModels() {
+  for (const B of SCN.meshes.values()) if (B.mesh) { SCN.group && SCN.group.remove(B.mesh); B.mesh.dispose(); }
+  SCN.meshes.clear(); SCN.tiles.clear(); SCN.dirty = true;
+}
 function initScenery(w) {
   buildModels();
   buildImpostors();
@@ -63,9 +79,12 @@ function genTile(w, f, x, y) {
   const out = [];
   const flora = body.type === 'planet' ? null : MOON_FLORA;
   // candidates per kind, then accept by the local biome weight
-  const kinds = new Map();
+  const kinds = new Map(), prof = floraProfile(body), fk = FLORA_SCALE[prof] || 1;
   if (flora) for (const [k, d] of flora) kinds.set(k, d);
-  else for (const b in FLORA) for (const [k, d] of FLORA[b]) kinds.set(k, Math.max(kinds.get(k) || 0, d));
+  else for (const b in FLORA) for (const [k0, d] of FLORA[b]) {
+    const k = swapKind(prof, k0);
+    if (k) kinds.set(k, Math.max(kinds.get(k) || 0, ROCKY.has(k) ? d : d * fk));
+  }
   const formK = FORMATIONS[body.name];
   if (formK) { kinds.set('pillar', 0.00012 * formK); kinds.set('arch', 0.00003 * formK); }
   const area = tileArc * tileArc, grassK = detail().grass;
@@ -83,7 +102,7 @@ function genTile(w, f, x, y) {
       if (flora) dens = maxD;
       else {
         const bw = gw[fu < 0.5 ? (fv < 0.5 ? k00 : k01) : (fv < 0.5 ? k10 : k11)];
-        for (const b in FLORA) for (const [k, d] of FLORA[b]) if (k === kind) dens += d * bw[b];
+        for (const b in FLORA) for (const [k, d] of FLORA[b]) if (swapKind(prof, k) === kind) dens += d * bw[b] * (ROCKY.has(kind) ? 1 : fk);
         if (kind === 'pillar' || kind === 'arch') dens = maxD * (bw[B_DESERT] + bw[B_HIGH] + bw[B_ALIEN]);
       }
       if (rnd() * maxD > dens) continue;
@@ -170,13 +189,15 @@ function updateScenery(w, budgetMs = 3) {
 }
 // one instanced mesh per model, detail level and quarter around the player (quarters behind the
 // camera are frustum-culled as a whole: each mesh gets a bounding sphere around its instances)
-function bucket(kind, vi, lo, quad) {
-  const key = kind + vi + (lo ? 'L' : 'H') + quad;
+function bucket(kind, vi, lo, quad, part = -1) {
+  const key = kind + vi + (lo ? 'L' : 'H') + quad + 'p' + part;
   let B = SCN.meshes.get(key);
   if (!B) {
-    const K = KINDS[kind], src = MODELS[K.model || kind][vi][lo ? 'lo' : 'hi'];
+    const K = KINDS[kind], V = MODELS[K.model || kind][vi];
     const near = (K.far || 1) < 1;
-    const mat = ROCKY.has(kind) ? (near ? ROCK_NEAR_MAT : ROCK_MAT) : (kind === 'grass' || kind === 'aliengrass') ? GRASS_MAT : (near ? FOLIAGE_NEAR_MAT : FOLIAGE_MAT);
+    // real (glTF) models come in parts with their own textured materials
+    const src = part >= 0 ? V.hi[part].geo : V[lo ? 'lo' : 'hi'];
+    const mat = part >= 0 ? V.hi[part].mat : ROCKY.has(kind) ? (near ? ROCK_NEAR_MAT : ROCK_MAT) : (kind === 'grass' || kind === 'aliengrass') ? GRASS_MAT : (near ? FOLIAGE_NEAR_MAT : FOLIAGE_MAT);
     // a geometry of our own (sharing the model's buffers) so this mesh can have its own bounds
     const geo = new THREE.BufferGeometry();
     geo.index = src.index;
@@ -202,8 +223,12 @@ function rebuildInstances(w) {
     for (const b of builds) if (b.pos.distanceTo(it.pos) < b.def.fp + (it.big ? 1.5 : 0.4)) { blocked = true; break; }
     if (blocked) continue;
     if (it.colls && d < 45) for (const c of it.colls) SCN.colliders.push(c);
-    if (it.big && d > impD && IMP.tex && IMP.cells[it.kind + it.vi]) { impList.push(it); continue; }
+    const V = MODELS[KINDS[it.kind].model || it.kind][it.vi];
+    if (!V) continue;
+    // real models are detailed, so they switch to cut-outs sooner
+    if (it.big && d > (V.glb ? D.loD * 0.5 : impD) && IMP.tex && IMP.cells[it.kind + it.vi]) { impList.push(it); continue; }
     const lo = it.big ? d > D.loD : d > D.grassR * 0.55;
+    if (V.glb) { for (let p = 0; p < V.hi.length; p++) bucket(it.kind, it.vi, false, 0, p).list.push(it); continue; }
     const dx = it.pos.x - P.x, dy = it.pos.y - P.y, dz = it.pos.z - P.z;
     // only grass (thousands of copies) is split into quarters; for the rest the extra draw calls cost more than they save
     const quad = it.big ? 0 : (dx * t1.x + dy * t1.y + dz * t1.z > 0 ? 1 : 0) + (dx * t2x + dy * t2y + dz * t2z > 0 ? 2 : 0);

@@ -2,7 +2,7 @@
 // ---------- game data: bodies, species, save, options ----------
 const VERSION = '0.7';
 // bump with every release so browsers fetch fresh models and textures
-const ASSET_V = '0.7.1';
+const ASSET_V = '0.7.2';
 
 const CATS = {
   plant:   { label: 'Plants',       one: 'Plant',   n: 4, base: 1,  tag: '#9ef08a' },
@@ -65,6 +65,15 @@ PLANETS.forEach((P, i) => {
 const bodyById = id => BODIES.find(b => b.id === id) || BODIES[0];
 const bodyCats = b => b.type === 'planet' ? PLANET_CATS : (b.ice ? ['rock', 'dust', 'ice'] : ['rock', 'dust']);
 const planetOf = b => b.type === 'planet' ? b : b.parent;
+// what can grow on a world, from its air and water:
+//   earth      Earth-like air and liquid water: Earth plants (Verdara)
+//   earthCold  breathable but frozen: hardy Earth plants only (Glacia)
+//   alienDry   CO2 air, briny water: lichen crusts and sparse alien growths (Ruska)
+//   alienWet   thick sulfur haze: alien plants only (Xeno Prime)
+//   none       no air (Umbros, every moon): nothing grows
+const FLORA_PROFILE = { Verdara: 'earth', Glacia: 'earthCold', Ruska: 'alienDry', 'Xeno Prime': 'alienWet' };
+const floraProfile = b => b.type === 'planet' && b.atmo ? (FLORA_PROFILE[b.name] || 'alienWet') : 'none';
+const hasPlants = b => floraProfile(b) !== 'none';
 function isUnlocked(b) { return save.unlocked.includes(planetOf(b).idx); }
 
 // ---------- procedural species ----------

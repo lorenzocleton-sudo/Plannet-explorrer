@@ -216,14 +216,25 @@ function makeAlienShroom(seed, lo) { // giant umbrella mushroom
   return b.geo();
 }
 
+// ---- lichen / microbial mats: flat crusts on the ground (dry CO2 worlds) ----
+function makeLichen(seed, lo) {
+  const r = mulberry32(seed), b = new GB(), n = lo ? 2 : 5;
+  for (let k = 0; k < n; k++) {
+    const a = r() * Math.PI * 2, d = k ? 0.3 + r() * 0.5 : 0, s = 0.35 + r() * 0.4;
+    const c0 = C3(25 + r() * 70, 12 + r() * 14, 20 + r() * 8), c1 = C3(40 + r() * 60, 18, 30 + r() * 8);
+    blob(b, Math.cos(a) * d, -0.02, Math.sin(a) * d, s, 0.04 + r() * 0.03, s * (0.7 + r() * 0.5), seed + k, 0.45, c0, c1, () => 0, 0, lo ? 6 : 9);
+  }
+  return b.geo();
+}
+
 // ---- grass ----
 function makeGrass(seed, n, h, alien) {
   const r = mulberry32(seed), b = new GB();
   for (let k = 0; k < n; k++) {
     const a = r() * Math.PI * 2, d = r() * 0.55, root = V3(Math.cos(a) * d, -0.05, Math.sin(a) * d);
     const dir = V3(Math.cos(a + (r() - 0.5)), 0, Math.sin(a + (r() - 0.5)));
-    const len = h * (0.55 + r() * 0.6), base = alien ? C3(280, 30, 22) : C3(95, 35, 20), tip = alien ? C3(300, 60, 55) : C3(80, 45, 48);
-    strip(b, root, dir.multiplyScalar(0.25), len, alien ? 0.09 : 0.07, 0.005, 0.5 + r(), 2, base, tip, 1, alien ? 0.5 : 0);
+    const len = h * (0.5 + r() * 0.6), base = alien ? C3(280, 30, 30) : C3(92, 38, 30), tip = alien ? C3(300, 60, 58) : C3(78, 48, 52);
+    strip(b, root, dir.multiplyScalar(0.25), len, alien ? 0.11 : 0.1, 0.01, 0.6 + r(), 2, base, tip, 1, alien ? 0.5 : 0);
   }
   return b.geo(true); // normals point up: blades light like the ground they grow from
 }
@@ -282,7 +293,7 @@ function makeArch(seed, lo) { // natural stone arch (unit span)
 const NATURE_U = { uTime: { value: 0 }, uWind: { value: 1 } };
 const fadeU = v => ({ uTime: NATURE_U.uTime, uWind: NATURE_U.uWind, uFadeFar: { value: v } });
 // wind sway + shrink-in at the edge of the draw distance (no popping) + alien glow
-function natureShader(m, swayAmp, U) {
+function natureShader(m, swayAmp, U, thin = false, noFlip = thin) {
   m.userData.U = U;
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -297,6 +308,9 @@ vGlow = aGlow;
   vec3 iPos = instanceMatrix[3].xyz;
   float iDist = length((modelMatrix * vec4(iPos, 1.0)).xyz - cameraPosition);
   transformed *= smoothstep(uFadeFar, uFadeFar * 0.8, iDist);
+  ${thin ? `// fewer clumps further out: each clump has a random threshold and drops out past it
+  float keep = 1.0 - smoothstep(uFadeFar * 0.25, uFadeFar * 0.95, iDist) * 0.85;
+  transformed *= step(fract(sin(dot(iPos, vec3(12.9898, 78.233, 37.719))) * 43758.5453), keep);` : ''}
   float ph = dot(iPos, vec3(0.13, 0.17, 0.11));
   float gust = sin(uTime * 1.3 + ph) * 0.6 + sin(uTime * 2.9 + ph * 2.3) * 0.25 + sin(uTime * 0.4 + ph * 0.3) * 0.5;
   transformed.x += gust * aSway * ${swayAmp.toFixed(3)} * uWind;
@@ -305,13 +319,15 @@ vGlow = aGlow;
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vGlow;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vGlow * 0.9;');
+    // grass and leaf cards: both sides lit the same (no dark backs)
+    if (noFlip) sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal = normal * faceDirection;', ''));
   };
-  m.customProgramCacheKey = () => 'nature' + swayAmp;
+  m.customProgramCacheKey = () => 'nature' + swayAmp + thin + noFlip;
   return m;
 }
 const foliageMat = () => natureShader(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, side: THREE.DoubleSide }), 0.22, fadeU(200));
 const FOLIAGE_MAT = foliageMat(), FOLIAGE_NEAR_MAT = foliageMat();
-const GRASS_MAT = natureShader(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide }), 0.35, fadeU(40));
+const GRASS_MAT = natureShader(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide }), 0.35, fadeU(40), true);
 
 // rocks use the ground's rock texture (projected in world space, like the terrain)
 const ROCK_VERT = `
@@ -356,9 +372,9 @@ function buildModels() {
   const two = (fn, seeds, ...a) => seeds.map(s => ({ hi: fn(s, false, ...a), lo: fn(s, true, ...a) }));
   Object.assign(MODELS, {
     conifer: two(makeConifer, [11, 12, 13]), broadleaf: two(makeBroadleaf, [21, 22, 23]), swamptree: two(makeSwampTree, [31, 32]),
-    deadtree: two(makeDeadTree, [41, 42]), cactus: two(makeCactus, [51, 52]), bush: two(makeBush, [61, 62, 63]), drybush: two(makeDryShrub, [64, 65]),
+    lichen: two(makeLichen, [121, 122, 123]), deadtree: two(makeDeadTree, [41, 42]), cactus: two(makeCactus, [51, 52]), bush: two(makeBush, [61, 62, 63]), drybush: two(makeDryShrub, [64, 65]),
     bulbs: two(makeAlienBulbs, [71, 72]), tubes: two(makeAlienTubes, [81, 82]), shroom: two(makeAlienShroom, [91, 92]),
-    grass: [{ hi: makeGrass(101, 9, 0.75, false), lo: makeGrass(101, 4, 0.75, false) }, { hi: makeGrass(102, 7, 1.1, false), lo: makeGrass(102, 3, 1.1, false) }],
+    grass: [{ hi: makeGrass(101, 10, 0.5, false), lo: makeGrass(101, 4, 0.5, false) }, { hi: makeGrass(102, 8, 0.75, false), lo: makeGrass(102, 3, 0.75, false) }],
     aliengrass: [{ hi: makeGrass(111, 6, 1.0, true), lo: makeGrass(111, 3, 1.0, true) }],
     rock: [1, 2, 3, 4, 5].map(s => ({ hi: makeRock(200 + s, 14), lo: makeRock(200 + s, 7) })),
     slab: [1, 2].map(s => ({ hi: makeRock(300 + s, 16, 2.4, 0.6), lo: makeRock(300 + s, 8, 2.4, 0.6) })),
@@ -426,10 +442,11 @@ Object.values(GEO).forEach(g => sharedGeos.add(g));
 // ---- impostors: far-away trees as flat cut-outs ----
 // Each tree model is photographed once from the side into an atlas. Far trees are then drawn as
 // camera-facing quads (2 triangles instead of hundreds), turning around their own "up".
-const IMP_KINDS = ['conifer', 'broadleaf', 'swamptree', 'deadtree', 'cactus', 'shroom'], IMP_GRID = 4;
+const IMP_KINDS = ['conifer', 'broadleaf', 'swamptree', 'deadtree', 'cactus', 'shroom'], IMP_GRID = 5;
 const IMP = { tex: null, cells: {}, mat: null, geo: null };
-function buildImpostors() {
-  if (IMP.tex || !MODELS.ready) return;
+function buildImpostors(force = false) {
+  if ((IMP.tex && !force) || !MODELS.ready) return;
+  if (IMP.tex) { IMP.tex.dispose(); IMP.tex = null; IMP.cells = {}; }
   const S = 1024, cell = S / IMP_GRID;
   const rt = new THREE.WebGLRenderTarget(S, S, { depthBuffer: true });
   const scene = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
@@ -437,7 +454,7 @@ function buildImpostors() {
   key.position.set(0.4, 1, 0.9);
   scene.add(new THREE.AmbientLight(0xffffff, 0.55), key);
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-  const mesh = new THREE.Mesh(undefined, mat);
+  const mesh = new THREE.Mesh(undefined, mat), partMeshes = [];
   scene.add(mesh);
   const prev = { target: renderer.getRenderTarget(), color: renderer.getClearColor(new THREE.Color()), alpha: renderer.getClearAlpha(), auto: renderer.autoClear };
   renderer.setRenderTarget(rt);
@@ -445,10 +462,18 @@ function buildImpostors() {
   renderer.clear();
   renderer.autoClear = false;
   let n = 0;
-  for (const k of IMP_KINDS) MODELS[k].forEach((v, vi) => {
-    const bb = v.hi.boundingBox || (v.hi.computeBoundingBox(), v.hi.boundingBox);
+  for (const k of IMP_KINDS.concat(['bush'])) MODELS[k].forEach((v, vi) => {
+    const bb = v.box || v.hi.boundingBox || (v.hi.computeBoundingBox(), v.hi.boundingBox);
     const w = Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z) * 1.05, h = bb.max.y * 1.02, y0 = Math.min(0, bb.min.y);
-    mesh.geometry = v.hi;
+    for (const pm of partMeshes) scene.remove(pm);
+    partMeshes.length = 0;
+    if (v.glb) { // textured model: one temporary mesh per part
+      mesh.visible = false;
+      for (const p of v.hi) {
+        const pm = new THREE.Mesh(p.geo, new THREE.MeshLambertMaterial({ map: p.mat.map, color: p.mat.color, vertexColors: !!p.geo.attributes.color, alphaTest: 0.5, side: THREE.DoubleSide }));
+        partMeshes.push(pm); scene.add(pm);
+      }
+    } else { mesh.visible = true; mesh.geometry = v.hi; }
     const half = Math.max(w, (h - y0) / 2);
     Object.assign(cam, { left: -half, right: half, bottom: y0, top: y0 + half * 2 });
     cam.position.set(0, 0, 50); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
@@ -461,10 +486,12 @@ function buildImpostors() {
     IMP.cells[k + vi] = { u: cx / IMP_GRID, v: cy / IMP_GRID, w: half, h: half * 2, y0 };
     n++;
   });
+  for (const pm of partMeshes) { scene.remove(pm); pm.material.dispose(); }
   renderer.autoClear = prev.auto;
   renderer.setRenderTarget(prev.target);
   renderer.setClearColor(prev.color, prev.alpha);
   IMP.tex = rt.texture;
+  if (IMP.mat) { IMP.mat.map = IMP.tex; IMP.mat.needsUpdate = true; return; } // rebuilt atlas: the material already exists, just point it at the new texture
   IMP.geo = new THREE.PlaneGeometry(2, 2).translate(0, 1, 0); // x -1..1, y 0..2; scaled per instance in the shader
   IMP.mat = new THREE.MeshBasicMaterial({ map: IMP.tex, alphaTest: 0.5, side: THREE.DoubleSide, transparent: false });
   IMP.mat.userData.U = Object.assign(fadeU(300), { uLight: { value: 1 } });
@@ -491,4 +518,51 @@ gl_Position = projectionMatrix * mvPosition;`);
   };
   IMP.mat.customProgramCacheKey = () => 'impostor1';
   sharedMats.add(IMP.mat); sharedGeos.add(IMP.geo);
+}
+
+// ---- real tree models (CC0, Quaternius Stylized Nature MegaKit; see CREDITS.md) ----
+// Loaded in the background; until they arrive the procedural trees stand in. Each model part
+// (bark, leaves) keeps its textures and gets the same wind sway and distance fade as other plants.
+const TREE_FILES = { broadleaf: ['tree1', 'tree2', 'tree3'] };
+function loadTreeModels(onDone) {
+  if (!THREE.GLTFLoader) return;
+  const loader = new THREE.GLTFLoader(), jobs = [];
+  for (const kind in TREE_FILES) TREE_FILES[kind].forEach((f, vi) => jobs.push(new Promise(res => loader.load(`assets/models/trees/${f}.glb?v=${ASSET_V}`, g => res({ kind, vi, g }), undefined, () => res(null)))));
+  Promise.all(jobs).then(list => {
+    if (list.some(x => !x)) { console.warn('tree models failed to load, keeping the procedural trees'); return; }
+    const out = {};
+    for (const { kind, vi, g } of list) {
+      g.scene.updateMatrixWorld(true);
+      const parts = [], box = new THREE.Box3();
+      g.scene.traverse(o => {
+        if (!o.isMesh) return;
+        const geo = o.geometry.clone().applyMatrix4(o.matrixWorld);
+        geo.computeBoundingBox(); box.union(geo.boundingBox);
+        parts.push({ geo, src: o.material });
+      });
+      // stand on the ground at a natural size (trees ~7 m, bushes ~1.2 m)
+      const target = kind === 'bush' ? 1.2 : 7, s = target / (box.max.y - box.min.y);
+      const m4 = new THREE.Matrix4().makeScale(s, s, s).premultiply(new THREE.Matrix4().makeTranslation(0, -box.min.y * s - 0.05, 0));
+      box.applyMatrix4(m4);
+      for (const p of parts) {
+        p.geo.applyMatrix4(m4);
+        const pos = p.geo.attributes.position, n = pos.count, sway = new Float32Array(n);
+        for (let i = 0; i < n; i++) { const t = clamp(pos.getY(i) / box.max.y, 0, 1); sway[i] = t * t; }
+        p.geo.setAttribute('aSway', new THREE.BufferAttribute(sway, 1));
+        p.geo.setAttribute('aGlow', new THREE.BufferAttribute(new Float32Array(n), 1));
+        p.geo.computeBoundingSphere();
+        const leaf = /leave/i.test(p.src.name || '');
+        const mat = new THREE.MeshStandardMaterial({ map: p.src.map, color: 0xffffff, vertexColors: !!p.geo.attributes.color, roughness: 0.85, metalness: 0,
+          alphaTest: 0.5, side: leaf ? THREE.DoubleSide : THREE.FrontSide });
+        p.mat = natureShader(mat, leaf ? (kind === 'bush' ? 0.15 : 0.3) : 0.05, kind === 'bush' ? FOLIAGE_NEAR_MAT.userData.U : FOLIAGE_MAT.userData.U, false, leaf);
+        sharedGeos.add(p.geo); sharedMats.add(p.mat);
+        delete p.src;
+      }
+      (out[kind] = out[kind] || [])[vi] = { hi: parts, glb: true, box, ext: { rx: Math.max(-box.min.x, box.max.x), rz: Math.max(-box.min.z, box.max.z), top: box.max.y } };
+    }
+    buildModels(); // procedural set first, then the real models replace their kinds
+    Object.assign(MODELS, out);
+    buildImpostors(true);
+    if (onDone) onDone();
+  });
 }

@@ -53,6 +53,7 @@ resize();
 initTerrainWorkers();
 loadGroundTextures(detail().texSize);
 loadAstronaut();
+loadTreeModels(() => { if (world) resetSceneryModels(); });
 requestAnimationFrame(frame); // start the loop first so menus and HUD work even if landing fails
 try { land(save.current, true); arrival = null; }
 catch (err) { showFatal(err, true); }
