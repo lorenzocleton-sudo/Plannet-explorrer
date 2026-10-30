@@ -28,9 +28,10 @@ function planetHeight(body, x, y, z) {
   const k = R / 700;
   const ripple = (vnoise3(x * R / 25, y * R / 25, z * R / 25, s + 7) - 0.5) * 1.6;
   if (c < 0) {
-    // sea floor: shallow shelf near the coast, deeper basins offshore
+    // sea floor: carries on the slope of the beach, so shores run gently into the water,
+    // then drops over a shelf into deeper basins offshore
     const hills = (fbm3(x * k, y * k, z * k, s + 5, 3) - 0.5) * 30;
-    return -smooth(0, 0.55, -c) * 180 - 3 + hills * smooth(0, 0.4, -c) + ripple;
+    return 1 + c * body.land * 1.6 - smooth(0.03, 0.55, -c) * 160 + hills * smooth(0.1, 0.4, -c) + ripple * smooth(0, 0.05, -c);
   }
   const inland = smooth(0.02, 0.6, c);
   // lowlands rise slowly from the coast; rolling hills grow further in
@@ -53,7 +54,14 @@ function planetHeight(body, x, y, z) {
     if (peak > 0) m += peak * Math.pow(ridge, 5) * body.mount * 0.6;
     h += rangeMask * m;
   }
-  return h + ripple;
+  // a few rocky cliffs along the coast (most shores stay gentle)
+  const cliff = smooth(0.72, 0.8, vnoise3(x * 14, y * 14, z * 14, s + 51));
+  if (cliff > 0) h += cliff * smooth(0.002, 0.03, c) * 14;
+  h += ripple * smooth(0, 0.05, c);
+  // swamps: flat wet lowland with shallow ponds
+  const sw = swampiness(body, x, y, z, c);
+  if (sw > 0) h = lerp(h, 0.7 + (fbm3(x * R / 40, y * R / 40, z * R / 40, s + 77, 2) - 0.5) * 3.6, sw * 0.9);
+  return h;
 }
 
 function rawHeight(body, d) {
@@ -114,36 +122,30 @@ function heightAt(body, d) {
   if (dt > S.cosOuter) h = lerp(h, S.h, 1 - smooth(12, 28, Math.acos(Math.min(1, dt)) * body.R));
   return h;
 }
-function biomeOf(body, h, d) {
-  if (body.type === 'planet') return h < 0 ? 0 : h < body.hRocky ? 1 : h < body.hCrystal ? 2 : 3;
-  if (body.ice && fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3) > 0.56) return 2;
+// planets: the main biome index (BIOMES), or -1 under the sea; moons: 0 dust, 1 rocky highland, 2 ice
+function biomeOf(body, h, d, slope = 1) {
+  if (body.type === 'planet') return h < 0 ? -1 : biomeWeights(body, d, h, slope);
+  if (moonIce(body, d) > 0.5) return 2;
   return h > body.land * 0.35 + (vnoise3(d.x * body.R / 40, d.y * body.R / 40, d.z * body.R / 40, body.seed + 9) - 0.5) * 20 ? 1 : 0;
+}
+// icy moons keep their ice towards the poles and in a few patches
+function moonIce(body, d) {
+  if (!body.ice) return 0;
+  const lat = Math.abs(d.y);
+  return smooth(0.53, 0.59, fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3) + smooth(0.45, 0.85, lat) * 0.12 - 0.04);
 }
 // slope = how flat the ground is (1 = level, 0 = vertical cliff)
 function colorOf(body, b, h, d, slope = 1) {
+  if (body.type === 'planet') return planetGroundColor(body, d, h, slope);
   const R = body.R, C = body.col;
-  const tint = (vnoise3(d.x * R / 60, d.y * R / 60, d.z * R / 60, body.seed + 99) - 0.5) * 10
-             + (vnoise3(d.x * R / 9, d.y * R / 9, d.z * R / 9, body.seed + 98) - 0.5) * 5;
-  if (body.type !== 'planet') {
-    // grey dust, darker maria, rockier highlands and slopes, bright ice patches
-    const mix = (a, c2, t) => [lerp(a[0], c2[0], t), lerp(a[1], c2[1], t), lerp(a[2], c2[2], t)];
-    let col = mix(C.dust, C.mare, mareMask(body, d.x, d.y, d.z));
-    col = mix(col, C.rock, Math.max(b === 1 ? 0.6 : 0, smooth(0.9, 0.72, slope)));
-    if (body.ice) col = mix(col, C.ice, smooth(0.53, 0.59, fbm3(d.x * 2.4, d.y * 2.4, d.z * 2.4, body.seed + 7, 3)));
-    return hsl2rgb(col[0], col[1], col[2] + tint * 0.8);
-  }
-  let col;
+  const tint = (vnoise3(d.x * R / 60, d.y * R / 60, d.z * R / 60, body.seed + 99) - 0.5) * 9
+             + (vnoise3(d.x * R / 9, d.y * R / 9, d.z * R / 9, body.seed + 98) - 0.5) * 4;
+  // grey dust, darker maria, rockier highlands and slopes, bright ice
   const mix = (a, c2, t) => [lerp(a[0], c2[0], t), lerp(a[1], c2[1], t), lerp(a[2], c2[2], t)];
-  if (h < 0) col = [C.liquid[0], C.liquid[1], C.liquid[2] + 6 - Math.min(24, -h * 0.25)];
-  else {
-    // beach -> lowland -> rock -> peaks (-> snow), blended so there are no hard bands
-    col = mix(C.beach || C.plains, C.plains, smooth(1.5, 5, h));
-    col = mix(col, C.rocky, smooth(body.hRocky * 0.8, body.hRocky * 1.2, h));
-    col = mix(col, C.crystal, smooth(body.hCrystal * 0.9, body.hCrystal * 1.1, h));
-    if (C.snow) col = mix(col, C.snow, smooth(body.mount * 0.7, body.mount * 0.8, h) * smooth(0.6, 0.8, slope));
-    col = mix(col, C.rocky, smooth(0.86, 0.68, slope) * smooth(1, 4, h)); // bare rock on steep slopes
-  }
-  return hsl2rgb(col[0], col[1], col[2] + tint);
+  let col = mix(C.dust, C.mare, mareMask(body, d.x, d.y, d.z));
+  col = mix(col, C.rock, Math.max(b === 1 ? 0.55 : 0, smooth(0.9, 0.7, slope)));
+  col = mix(col, C.ice, moonIce(body, d));
+  return hsl2rgb(col[0], col[1], col[2] + tint * 0.8);
 }
 
 // pick a fairly flat dry spot for the lander
@@ -356,7 +358,7 @@ function genBody(body) {
   w.ambient = new THREE.AmbientLight(0xffffff, body.dark ? 0.08 : 0.35);
   w.sun = new THREE.DirectionalLight(0xfff6e8, body.dark ? 0.08 : 0.95);
   w.sun.castShadow = true;
-  w.sun.shadow.mapSize.set(2048, 2048);
+  w.sun.shadow.mapSize.set(detail().shadow, detail().shadow);
   Object.assign(w.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 220 });
   w.sun.shadow.bias = -0.0008;
   // small fill light around you plus a helmet spotlight, both for the night
@@ -426,6 +428,18 @@ function updateSampleCells(w, maxSpawn = 2) {
   }
 }
 
+// chance of each sample type per try, by planet biome
+const BIOME_SAMPLES = {
+  sea: { plant: 0.04 },
+  [-1]: { plant: 0.04 },
+  [B_GRASS]: { plant: 0.16, fossil: 0.02, rock: 0.02 },
+  [B_FOREST]: { plant: 0.2, fossil: 0.03, rock: 0.01 },
+  [B_DESERT]: { rock: 0.1, fossil: 0.05, mineral: 0.03, plant: 0.02 },
+  [B_HIGH]: { rock: 0.13, mineral: 0.05, fossil: 0.02 },
+  [B_TUNDRA]: { rock: 0.08, mineral: 0.03, plant: 0.03, fossil: 0.02 },
+  [B_SWAMP]: { plant: 0.18, fossil: 0.05 },
+  [B_ALIEN]: { mineral: 0.14, plant: 0.08, fossil: 0.03 },
+};
 function spawnCell(w, key, f, x, y, n) {
   const body = w.body, R = w.R, species = genSpecies(body), size = 2 / n;
   const a0 = -1 + x * size, b0 = -1 + y * size, arc = R * size * Math.PI / 4;
@@ -442,10 +456,10 @@ function spawnCell(w, key, f, x, y, n) {
     const h = groundH(d), b = biomeOf(body, h, d);
     let cat = null;
     if (body.type === 'planet') {
-      if (b === 0) { if (r < 0.04) cat = 'plant'; }
-      else if (b === 1) { if (r < 0.18) cat = 'plant'; else if (r < 0.21) cat = 'fossil'; else if (r < 0.22) cat = 'rock'; }
-      else if (b === 2) { if (r < 0.13) cat = 'rock'; else if (r < 0.16) cat = 'fossil'; else if (r < 0.18) cat = 'mineral'; }
-      else { if (r < 0.16) cat = 'mineral'; else if (r < 0.2) cat = 'rock'; else if (r < 0.21) cat = 'fossil'; }
+      // what grows or lies around depends on the biome
+      const P = BIOME_SAMPLES[b] || BIOME_SAMPLES.sea;
+      let acc = 0;
+      for (const k in P) { acc += P[k]; if (r < acc) { cat = k; break; } }
     } else {
       if (b === 0) { if (r < 0.08) cat = 'dust'; else if (r < 0.1) cat = 'rock'; }
       else if (b === 1) { if (r < 0.12) cat = 'rock'; }

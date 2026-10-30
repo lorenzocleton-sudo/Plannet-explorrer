@@ -2,10 +2,9 @@
 // ---------- streaming terrain: cube-sphere quadtree with level of detail ----------
 // Each cube face is a quadtree. Chunks close to the camera split into smaller, more detailed
 // chunks; far ones stay coarse. Chunks are built a few per frame within a time budget.
+// how fine the most detailed chunks are, how eagerly chunks split, and the build budget
+// all come from the Detail option (see DETAIL in render.js)
 const CH_N = 16;              // quads per chunk side
-const LEAF_SPACING = 1.4;     // target metres between vertices on the most detailed chunks
-const SPLIT = 1.2;            // split when the camera is closer than SPLIT × chunk size
-const BUILD_BUDGET_MS = 6;
 
 const _td = new THREE.Vector3();
 function dirFromParam(F, s, t, out) {
@@ -16,16 +15,14 @@ const FACE_FLIP = FACES.map(F => new THREE.Vector3().copy(F.u).cross(F.v).dot(F.
 
 function initTerrain(w) {
   const R = w.R;
-  const maxLevel = Math.max(3, Math.ceil(Math.log2(R * Math.PI / 2 / (CH_N * LEAF_SPACING))));
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-  let seaMat = null;
-  if (w.hasSea) {
-    const [wh, ws, wl] = w.body.col.liquid;
-    seaMat = new THREE.MeshPhongMaterial({ color: new THREE.Color().setHSL(wh / 360, ws / 100, (wl + 8) / 100), transparent: true, opacity: 0.82, shininess: 80, specular: 0x667788 });
-  }
+  const D = detail();
+  const maxLevel = Math.max(3, Math.ceil(Math.log2(R * Math.PI / 2 / (CH_N * D.leaf))));
+  // lit per pixel with smooth normals, so the ground never looks faceted
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0 });
+  const seaMat = w.hasSea ? makeWaterMaterial(w.body) : null;
   const group = new THREE.Group();
   w.scene.add(group);
-  w.terrain = { maxLevel, mat, seaMat, group, queue: new Set(), built: new Set(), frame: 0, chunks: 0 };
+  w.terrain = { maxLevel, mat, seaMat, group, queue: new Set(), built: new Set(), frame: 0, chunks: 0, detailKey: opts.quality };
   w.terrain.roots = FACES.map((F, f) => makeNode(w, f, 0, 0, 0));
   for (const r of w.terrain.roots) buildChunk(w, r);
 }
@@ -65,7 +62,7 @@ function buildChunk(w, node) {
     nor[v * 3] = n.x; nor[v * 3 + 1] = n.y; nor[v * 3 + 2] = n.z;
     const h = H[k];
     minH = Math.min(minH, h); maxH = Math.max(maxH, h);
-    const cl = colorOf(body, biomeOf(body, h, dv), h, dv, n.dot(dv));
+    const sl = n.dot(dv), cl = body.type === 'planet' ? planetGroundColor(body, dv, h, sl) : colorOf(body, biomeOf(body, h, dv), h, dv, sl);
     col[v * 3] = cl[0]; col[v * 3 + 1] = cl[1]; col[v * 3 + 2] = cl[2];
   }
   // skirts hide cracks where a detailed chunk meets a coarser neighbour
@@ -112,29 +109,32 @@ function buildChunk(w, node) {
   node.bound = node.arc * 0.75 + (maxH - minH) / 2;
   w.terrain.group.add(mesh);
 
-  if (w.hasSea && minH < 0.5) node.sea = buildSea(w, node);
+  if (w.hasSea && minH < 0.5) node.sea = buildSea(w, node, H, B);
   w.terrain.built.add(node);
   w.terrain.chunks++;
 }
 
-function buildSea(w, node) {
-  const M = 8, F = FACES[node.f], R = w.R;
-  const pos = new Float32Array((M + 1) * (M + 1) * 3), nor = new Float32Array(pos.length);
-  for (let j = 0; j <= M; j++) for (let i = 0; i <= M; i++) {
-    dirFromParam(F, node.a0 + node.size * i / M, node.b0 + node.size * j / M, _td);
-    const v = (j * (M + 1) + i) * 3;
-    pos[v] = _td.x * R; pos[v + 1] = _td.y * R; pos[v + 2] = _td.z * R;
-    nor[v] = _td.x; nor[v + 1] = _td.y; nor[v + 2] = _td.z;
+// water sheet at sea level on the same grid as the chunk, with the water depth at each vertex
+function buildSea(w, node, H, B) {
+  const N = CH_N, F = FACES[node.f], R = w.R;
+  const pos = new Float32Array((N + 1) * (N + 1) * 3), dep = new Float32Array((N + 1) * (N + 1));
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    dirFromParam(F, node.a0 + node.size * i / N, node.b0 + node.size * j / N, _td);
+    const v = j * (N + 1) + i;
+    pos[v * 3] = _td.x * R; pos[v * 3 + 1] = _td.y * R; pos[v * 3 + 2] = _td.z * R;
+    dep[v] = -H[(j + 1) * B + (i + 1)];
   }
   const idx = [], flip = FACE_FLIP[node.f];
-  for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) {
-    const q0 = j * (M + 1) + i, q1 = q0 + 1, q2 = q0 + M + 1, q3 = q2 + 1;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const q0 = j * (N + 1) + i, q1 = q0 + 1, q2 = q0 + N + 1, q3 = q2 + 1;
+    if (Math.max(dep[q0], dep[q1], dep[q2], dep[q3]) < -0.6) continue; // dry land: no water here
     if (flip) idx.push(q0, q2, q1, q1, q2, q3); else idx.push(q0, q1, q2, q1, q3, q2);
   }
+  if (!idx.length) return null;
   const geo = new THREE.BufferGeometry();
   geo.setIndex(idx);
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute('aDepth', new THREE.BufferAttribute(dep, 1));
   geo.computeBoundingSphere();
   const m = new THREE.Mesh(geo, w.terrain.seaMat);
   m.visible = false;
@@ -156,7 +156,7 @@ function freeNode(w, node) {
 function selectNode(w, node, cam) {
   const T = w.terrain;
   const d = Math.max(0, node.center.distanceTo(cam) - node.bound);
-  const canSplit = node.level < T.maxLevel;
+  const canSplit = node.level < T.maxLevel, SPLIT = detail().split;
   const want = canSplit && (d < SPLIT * node.arc || (node.children && d < SPLIT * node.arc * 1.25));
   if (want) {
     if (!node.children) node.children = [0, 1, 2, 3].map(q => makeNode(w, node.f, node.level + 1, node.x * 2 + (q & 1), node.y * 2 + (q >> 1)));
@@ -178,7 +178,7 @@ function show(T, node) {
   if (node.sea) node.sea.visible = vis;
 }
 
-function updateTerrain(w, cam, budgetMs = BUILD_BUDGET_MS) {
+function updateTerrain(w, cam, budgetMs = detail().budget) {
   const T = w.terrain;
   T.frame++;
   T.R = w.R;
@@ -205,4 +205,14 @@ function warmTerrain(w, cam, maxMs = 2500) {
   for (let i = 0; i < 60 && performance.now() - t0 < maxMs; i++) {
     if (!updateTerrain(w, cam, maxMs)) break;
   }
+}
+
+// the Detail option changed: throw the chunks away and rebuild at the new resolution
+function resetTerrain(w) {
+  const T = w.terrain;
+  for (const r of T.roots) freeNode(w, r);
+  w.scene.remove(T.group);
+  T.mat.dispose();
+  if (T.seaMat) T.seaMat.dispose();
+  initTerrain(w);
 }

@@ -543,6 +543,7 @@ function syncScene() {
 
   // day / night from where you stand relative to the sun
   updateSky(world, up, world.sunDir);
+  updateWater(world, up.dot(world.sunDir));
   if (world.clouds) world.clouds.rotation.y = time * B.atmo.wind;
   STARS.position.copy(camera.position);
   // helmet light points where you're looking, a little down

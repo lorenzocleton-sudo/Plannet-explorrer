@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6 (prompt 6: visual overhaul)
+### Part 1 (steps 1–3)
+- **Admin tab**: all admin buttons are off the screen. With debug mode on (Options), the pause menu gets an Admin tab: fly mode, teleport to lander, infinite O₂, god mode, fast machines / free travel, unlock all. On touch, while flying JUMP goes up and INTERACT goes down
+- **Assets**: CC0 ground textures (ambientCG via the jMonkeyEngine repo), a CC0 animated astronaut (Quaternius) and the three.js glTF loader are now in the repo; sand, dust and ice textures are generated. Sources and licences are listed in CREDITS.md
+- **Biomes**: planets now have several biomes (grassland, forest, desert, highlands, tundra, swamp, alien growth) from a simple climate (latitude, height, moisture) that blend smoothly. Biomes set the ground colour, which samples appear and which resources spots hold
+- **Shores and water**: coasts slope gently into the water with only the occasional rocky cliff; swamps have shallow ponds. Water is light and see-through in the shallows and darker when deep, with moving waves, sun glints, sky reflections and foam along the shore
+- **Smooth terrain**: per-pixel lighting with smooth normals everywhere; Options → Detail (Low / Medium / High) sets how fine the ground is near you and how far the detail reaches
+
 ## v0.5 (prompt 5: survival factory)
 ### Change: ores are deposited by hand
 - Standing at the lander no longer unloads your resources automatically (it also put back ore you had just taken out). Open the lander or a crate with INTERACT and tap **Deposit all ores** (or Store / Store everything)

@@ -129,6 +129,7 @@ function updateCutscene(dt) {
 function syncSky() {
   const w = world, up = _cu.copy(camera.position).normalize(), B = w.body;
   updateSky(w, up, w.sunDir);
+  updateWater(w, up.dot(w.sunDir));
   if (w.clouds) w.clouds.rotation.y = time * B.atmo.wind;
   STARS.position.copy(camera.position);
   w.sun.position.copy(w.landerPos).addScaledVector(w.sunDir, 90);

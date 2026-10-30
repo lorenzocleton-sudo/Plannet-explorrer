@@ -19,8 +19,18 @@ function spotWeights(body) {
   for (const id of ['ember', 'void_crystal', 'xeno_crystal']) if (diff >= SPOT_RES[id].minDiff && (id !== 'void_crystal' || body.idx === 3)) w[id] = 0.06;
   return w;
 }
-function rollResource(rnd, body) {
-  const w = spotWeights(body);
+// biomes shift the odds: metals in dry and rocky land, ice in the cold, silicon in sand and swamps, crystals in alien growth
+const BIOME_RES = {
+  [B_DESERT]: { iron_ore: 1.6, copper_ore: 1.4, silicon: 1.8, ice: 0.2 },
+  [B_HIGH]: { iron_ore: 1.8, copper_ore: 1.6, silicon: 0.6, ice: 0.6 },
+  [B_TUNDRA]: { ice: 3, iron_ore: 0.7, copper_ore: 0.7 },
+  [B_SWAMP]: { silicon: 1.8, copper_ore: 1.2, ice: 0.5 },
+  [B_FOREST]: { copper_ore: 1.3 },
+  [B_ALIEN]: { ember: 3, void_crystal: 3, xeno_crystal: 3, silicon: 1.4 },
+};
+function rollResource(rnd, body, biome = -1) {
+  const w = Object.assign({}, spotWeights(body)), mul = body.type === 'planet' && BIOME_RES[biome];
+  if (mul) for (const id in w) w[id] *= mul[id] || 1;
   let tot = 0;
   for (const id in w) tot += w[id];
   let x = rnd() * tot;
@@ -67,7 +77,7 @@ function spawnSpots(w) {
     if (w.hasSea && h < 0.5) continue;
     if (Math.acos(clamp(d.dot(w.L), -1, 1)) * R < 22) continue;
     if (w.spots.some(s => s.dir.distanceTo(d) * R < 30)) continue;
-    const res = w.spots.length < nearby ? spotRes(starters[w.spots.length]) : rollResource(rnd, body);
+    const res = w.spots.length < nearby ? spotRes(starters[w.spots.length]) : rollResource(rnd, body, biomeOf(body, h, d));
     const depth = spotDepth(res, rnd);
     const sp = { idx: w.spots.length, res, depth, dir: d.clone(), seed: Math.floor(rnd() * 1e9), group: null, label: null, drill: null };
     sp.pos = sp.dir.clone().multiplyScalar(R + h);

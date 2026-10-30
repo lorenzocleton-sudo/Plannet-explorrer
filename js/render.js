@@ -8,9 +8,23 @@ const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 250000);
 const hud = $('hud'), hx = hud.getContext('2d');
 let VW = 0, VH = 0, DPR = 1;
 
+// Detail levels (Options → Graphics → Detail). Low is meant for older tablets.
+// px: max pixel ratio, leaf: metres between terrain vertices up close, split: how far out detail
+// reaches, budget: ms per frame for building terrain, shadow: shadow map size
+const DETAIL = {
+  low:    { px: 0.75, leaf: 2.0, split: 1.0, budget: 4, shadow: 1024 },
+  medium: { px: 1,    leaf: 1.3, split: 1.25, budget: 6, shadow: 2048 },
+  high:   { px: 1.5,  leaf: 0.9, split: 1.6, budget: 8, shadow: 2048 },
+};
+const detail = () => DETAIL[opts.quality] || DETAIL.medium;
 function applyGraphics() {
-  const q = { low: 0.6, medium: 1, high: 2 }[opts.quality] || 1;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q));
+  const D = detail();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, D.px));
+  if (world && world.terrain && world.terrain.detailKey !== opts.quality) resetTerrain(world);
+  if (world && world.sun && world.sun.shadow.mapSize.x !== D.shadow) {
+    world.sun.shadow.mapSize.set(D.shadow, D.shadow);
+    if (world.sun.shadow.map) { world.sun.shadow.map.dispose(); world.sun.shadow.map = null; }
+  }
   renderer.setSize(VW, VH);
   if (renderer.shadowMap.enabled !== opts.shadows) {
     renderer.shadowMap.enabled = opts.shadows;
