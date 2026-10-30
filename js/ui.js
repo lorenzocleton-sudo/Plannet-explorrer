@@ -96,6 +96,13 @@ $('oReset').onclick = () => {
 };
 
 // ---------- codex ----------
+// line icons for the tools (match the helmet HUD)
+const svgI = d => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+const TOOL_SVG = {
+  scanner: svgI('<path d="M5 19a10 10 0 0 1 0-14M8.5 15.5a5 5 0 0 1 0-7"/><circle cx="12" cy="12" r="1.6"/><path d="M12 12l7-7M15 5h4v4"/>'),
+  collector: svgI('<path d="M4 10h16l-1.6 9a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6z"/><path d="M8 10l4-6 4 6"/>'),
+  build: svgI('<path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L4 14l6 6 7-7"/><path d="M7 17l-3 3"/>'),
+};
 const iconCache = {};
 function iconFor(sp) {
   if (iconCache[sp.id]) return iconCache[sp.id];
@@ -116,9 +123,10 @@ function iconFor(sp) {
 function codexSection(body) {
   const S = genSpecies(body);
   let tot = 0, got = 0, h = '';
-  for (const cat in S) for (const sp of S[cat]) { tot++; if (known(sp)) got++; }
+  const cats = Object.keys(S).filter(c => c !== 'plant' || hasPlants(body)); // nothing grows on airless worlds
+  for (const cat of cats) for (const sp of S[cat]) { tot++; if (known(sp)) got++; }
   h += `<h3>${body.name}${body.type === 'moon' ? ` <span class="muted">(moon of ${body.parent.name})</span>` : ''} <span class="muted" style="font-size:14px">— ${got}/${tot} species catalogued</span></h3>`;
-  for (const cat in S) {
+  for (const cat of cats) {
     h += `<h4>${CATS[cat].label}</h4><div class="grid">`;
     for (const sp of S[cat]) {
       if (known(sp)) {
@@ -171,13 +179,13 @@ const hotbar = $('hotbar');
 TOOLS.forEach((T, i) => {
   const b = document.createElement('button');
   b.className = 'slot';
-  b.innerHTML = `<span class="num">${i + 1}</span><span class="ico">${T.icon}</span><span class="nm">${T.name}</span>`;
+  b.innerHTML = `<span class="num">${i + 1}</span><span class="ico">${TOOL_SVG[T.id] || T.icon}</span><span class="nm">${T.name}</span>`;
   b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!menu) selectTool(i); });
   hotbar.appendChild(b);
 });
 function renderHotbar() {
   [...hotbar.children].forEach((b, i) => b.classList.toggle('sel', i === tool));
-  $('tAct').textContent = 'USE ' + TOOLS[tool].icon;
+  $('tAct').innerHTML = `<span class="tico">${TOOL_SVG[TOOLS[tool].id] || ''}</span>USE`;
 }
 renderHotbar();
 
@@ -197,6 +205,53 @@ function rr(x, y, w, h, r) {
   hx.beginPath();
   hx.moveTo(x + r, y); hx.arcTo(x + w, y, x + w, y + h, r); hx.arcTo(x + w, y + h, x, y + h, r);
   hx.arcTo(x, y + h, x, y, r); hx.arcTo(x, y, x + w, y, r); hx.closePath();
+}
+// ---- helmet HUD drawing helpers ----
+const HUD_C = { accent: '#9fe0ff', line: 'rgba(170,220,255,.55)', ok: '#8ef0b0', warn: '#ffb36b', bad: '#ff5d6d', hp: '#ff6b81', o2: '#45d4ff',
+  temp: '#ffcf6b', pack: '#8fe08a', scan: '#c3a2ff', dim: 'rgba(200,210,240,.45)', life: '#ffd166', rp: '#ffd166' };
+// text with a soft dark halo so it reads on bright snow and dark night alike
+function hudText(t, x, y, size, color, weight = '600', spacing = 0, align = 'left') {
+  hx.font = `${weight} ${size}px system-ui,-apple-system,"Segoe UI",sans-serif`;
+  hx.textAlign = align; hx.textBaseline = 'middle';
+  if ('letterSpacing' in hx) hx.letterSpacing = spacing + 'px';
+  hx.shadowColor = 'rgba(0,0,0,.75)'; hx.shadowBlur = 4;
+  hx.fillStyle = color; hx.fillText(t, x, y);
+  hx.shadowBlur = 0;
+  if ('letterSpacing' in hx) hx.letterSpacing = '0px';
+}
+// small line icons
+function hudIcon(name, x, y, color) {
+  hx.save(); hx.translate(x + 7, y); hx.strokeStyle = color; hx.fillStyle = color; hx.lineWidth = 1.6; hx.lineCap = hx.lineJoin = 'round';
+  hx.shadowColor = 'rgba(0,0,0,.7)'; hx.shadowBlur = 3;
+  hx.beginPath();
+  if (name === 'heart') { hx.moveTo(0, 5); hx.bezierCurveTo(-8, -1, -5, -7, 0, -3); hx.bezierCurveTo(5, -7, 8, -1, 0, 5); hx.fill(); }
+  else if (name === 'o2') { hx.arc(-2, 1, 4.5, 0, Math.PI * 2); hx.moveTo(6.5, -4); hx.arc(4.5, -4, 2, 0, Math.PI * 2); hx.stroke(); }
+  else if (name === 'temp') { hx.moveTo(0, -6); hx.lineTo(0, 2); hx.stroke(); hx.beginPath(); hx.arc(0, 4, 2.6, 0, Math.PI * 2); hx.fill(); }
+  else if (name === 'pack') { hx.rect(-5, -4, 10, 9); hx.moveTo(-3, -4); hx.lineTo(-3, -6); hx.lineTo(3, -6); hx.lineTo(3, -4); hx.moveTo(-5, 0); hx.lineTo(5, 0); hx.stroke(); }
+  else if (name === 'scan') { hx.arc(0, 0, 6, -0.9, 0.9); hx.moveTo(3, 0); hx.arc(0, 0, 3, -0.9, 0.9); hx.stroke(); hx.beginPath(); hx.arc(0, 0, 1.3, 0, Math.PI * 2); hx.fill(); }
+  else if (name === 'life') { hx.moveTo(-6, 0); hx.lineTo(-3, 0); hx.lineTo(-1, -5); hx.lineTo(1.5, 5); hx.lineTo(3.5, 0); hx.lineTo(6, 0); hx.stroke(); }
+  hx.restore();
+}
+// icon, thin bar and value
+function hudBar(x, y, icon, frac, color, text) {
+  hudIcon(icon, x, y, color);
+  const bx = x + 22, w = 128;
+  hx.fillStyle = 'rgba(255,255,255,.16)'; hx.fillRect(bx, y - 1.5, w, 3);
+  hx.fillStyle = color; hx.shadowColor = color; hx.shadowBlur = 6;
+  hx.fillRect(bx, y - 1.5, w * clamp(frac, 0, 1), 3);
+  hx.shadowBlur = 0;
+  hudText(text, bx + w + 8, y, 11, '#eef3ff', '600', 0.5);
+}
+// faint darkening at the corners and a hairline arc: the edge of the helmet visor
+let visorGrad = null, visorKey = '';
+function visorEdge() {
+  const key = VW + 'x' + VH;
+  if (key !== visorKey) {
+    visorKey = key;
+    visorGrad = hx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.55, VW / 2, VH / 2, Math.hypot(VW, VH) * 0.62);
+    visorGrad.addColorStop(0, 'rgba(0,8,20,0)'); visorGrad.addColorStop(1, 'rgba(0,8,20,.38)');
+  }
+  hx.fillStyle = visorGrad; hx.fillRect(0, 0, VW, VH);
 }
 function bar(x, y, w, h, frac, color, label) {
   hx.fillStyle = 'rgba(255,255,255,.1)'; rr(x, y, w, h, 4); hx.fill();
@@ -258,47 +313,41 @@ function drawHUD(dt) {
     hx.fillStyle = g; hx.fillRect(0, 0, VW, VH);
   }
   hx.textAlign = 'left';
-  hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 220, 180, 10); hx.fill();
-  hx.fillStyle = '#9fd8ff'; hx.font = 'bold 16px system-ui,sans-serif'; hx.textBaseline = 'top';
-  hx.fillText(B.name, 20, 18);
-  hx.fillStyle = '#ffd166'; hx.font = '13px system-ui,sans-serif'; hx.textAlign = 'right';
-  hx.fillText(save.rp + ' RP', 220, 20); hx.textAlign = 'left';
-  hx.fillStyle = B.breathable ? '#8ef0a0' : '#ff9d9d'; hx.font = '11px system-ui,sans-serif';
+  // ---- helmet HUD: no boxes, thin readouts along the edges of the visor ----
+  visorEdge();
   const lt = localTime(world, player.up), hh = Math.floor(lt), mm = Math.floor((lt - hh) * 60);
-  hx.fillText((B.breathable ? 'Breathable air' : 'No oxygen') + ` · g ${B.g.toFixed(1)} m/s² · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, 20, 38);
-  const hpc = player.hp < 30 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#e8566b';
-  bar(20, 56, 200, 16, player.hp / 100, hpc, `Health ${Math.ceil(player.hp)}`);
-  const o2c = player.o2 < 25 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#3ad0ff';
-  bar(20, 78, 200, 16, player.o2 / o2Max(), o2c, `O₂ ${Math.ceil(player.o2)} / ${o2Max()}${B.breathable ? ' · breathable air' : ''}`);
-  bar(20, 100, 200, 16, bag.length / BAG_MAX, bag.length >= BAG_MAX ? '#e0703a' : '#6bbf59', `Backpack ${bag.length}/${BAG_MAX}`);
-  bar(20, 122, 200, 16, 1 - scanT / SCAN_CD, scanT > 0 ? '#555d88' : '#b48cff', scanT > 0 ? `Scanner ${scanT.toFixed(1)}s` : 'Scanner ready [Q]');
-  // temperature line: red when it's hurting you
+  hudText(B.name.toUpperCase(), 22, 26, 15, HUD_C.accent, 'bold', 2);
+  hudText(`${B.breathable ? 'AIR OK' : 'NO O₂'} · ${B.g.toFixed(1)} M/S² · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · ALT ${(player.pos.length() - world.R).toFixed(0)} M`, 22, 45, 10.5, B.breathable ? HUD_C.ok : HUD_C.warn, '600', 1);
+  const blink = Math.sin(time * 10) > 0;
   const temp = player.temp ?? 0, hurtT = climateDamage(temp);
-  hx.fillStyle = hurtT > 0 ? (Math.sin(time * 8) > 0 ? '#ff6b6b' : '#ffb3b3') : temp >= HOT_LIMIT || temp <= COLD_LIMIT ? '#8ef0a0' : '#7a86b8';
-  hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
-  hx.fillText(`Temp ${Math.round(temp)}°C` + (hurtT > 0 ? (temp > 0 ? ' · TOO HOT' : ' · TOO COLD') + ` (-${hurtT.toFixed(1)} HP/s)` : temp >= HOT_LIMIT ? ' · heat suit OK' : temp <= COLD_LIMIT ? ' · cold suit OK' : ''), 20, 162);
-  hx.fillStyle = '#7a86b8';
-  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Inventory ${invTotal(playerInv())}/${invCap()}`, 20, 146);
-
+  let y = 72;
+  const row = (icon, frac, color, text, alert) => { hudBar(22, y, icon, frac, alert && blink ? HUD_C.bad : color, text); y += 26; };
+  row('heart', player.hp / 100, HUD_C.hp, `${Math.ceil(player.hp)}`, player.hp < 30);
+  row('o2', player.o2 / o2Max(), HUD_C.o2, `${Math.ceil(player.o2)}/${o2Max()}${B.breathable ? ' · AIR' : ''}`, player.o2 < 25);
+  row('temp', clamp((temp + 80) / 160, 0, 1), hurtT > 0 ? HUD_C.bad : HUD_C.temp,
+    `${Math.round(temp)}°C` + (hurtT > 0 ? (temp > 0 ? ' · TOO HOT' : ' · TOO COLD') : temp >= HOT_LIMIT ? ' · HEAT SUIT' : temp <= COLD_LIMIT ? ' · COLD SUIT' : ''), hurtT > 0);
+  row('pack', bag.length / BAG_MAX, bag.length >= BAG_MAX ? HUD_C.warn : HUD_C.pack, `${bag.length}/${BAG_MAX} · INV ${invTotal(playerInv())}/${invCap()}`);
+  row('scan', 1 - scanT / SCAN_CD, scanT > 0 ? HUD_C.dim : HUD_C.scan, scanT > 0 ? `${scanT.toFixed(1)}s` : (isTouch ? 'READY' : 'READY [Q]'));
   const sig = fossilSignal();
   if (sig < 50) {
     const bars = sig < 15 ? 3 : sig < 30 ? 2 : 1;
-    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 196, 220, 26, 8); hx.fill();
-    hx.fillStyle = '#ffd166'; hx.font = '12px system-ui,sans-serif'; hx.textBaseline = 'middle';
-    hx.fillText('Ancient life signal', 20, 209);
-    for (let i = 0; i < 3; i++) {
-      hx.fillStyle = i < bars ? '#ffd166' : 'rgba(255,255,255,.15)';
-      hx.fillRect(170 + i * 14, 214 - (i + 1) * 4, 10, (i + 1) * 4);
-    }
+    hudIcon('life', 22, y + 4, HUD_C.life);
+    for (let i = 0; i < 3; i++) { hx.fillStyle = i < bars ? HUD_C.life : 'rgba(255,255,255,.18)'; hx.fillRect(44 + i * 7, y + 9 - (i + 1) * 3, 4, (i + 1) * 3); }
+    hudText('ANCIENT LIFE', 72, y + 4, 10, HUD_C.life, '600', 1);
   }
 
   if (opts.minimap) {
     radarT -= dt;
     if (radarT <= 0) { updateRadar(); radarT = 0.25; }
     const ms = Math.min(150, VW * 0.28), rad = ms / 2, cx = VW - rad - 12, cy = rad + 12;
-    hx.fillStyle = 'rgba(10,13,30,.78)'; hx.beginPath(); hx.arc(cx, cy, rad + 4, 0, Math.PI * 2); hx.fill();
-    hx.imageSmoothingEnabled = true;
+    hx.save(); hx.beginPath(); hx.arc(cx, cy, rad, 0, Math.PI * 2); hx.clip();
+    hx.globalAlpha = 0.72; hx.imageSmoothingEnabled = true;
     hx.drawImage(radar, cx - rad, cy - rad, ms, ms);
+    hx.globalAlpha = 1; hx.restore();
+    // thin ring with ticks, like a helmet radar
+    hx.strokeStyle = HUD_C.line; hx.lineWidth = 1.5; hx.beginPath(); hx.arc(cx, cy, rad + 3, 0, Math.PI * 2); hx.stroke();
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, l = i % 6 ? 3 : 7; hx.beginPath(); hx.moveTo(cx + Math.cos(a) * (rad + 3), cy + Math.sin(a) * (rad + 3)); hx.lineTo(cx + Math.cos(a) * (rad + 3 + l), cy + Math.sin(a) * (rad + 3 + l)); hx.stroke(); }
+    hudText(`${save.rp} RP`, cx, cy + rad + 22, 12, HUD_C.rp, 'bold', 1.5, 'center');
     for (const it of world.items) {
       if (it.taken || !((it.cat === 'fossil' && it.revealed) || it.ping > 0)) continue;
       const p = radarPoint(it.pos, cx, cy, rad);
@@ -319,6 +368,7 @@ function drawHUD(dt) {
     hx.restore();
   }
 
+  if (!opts.minimap) hudText(`${save.rp} RP`, VW - 22, 26, 13, HUD_C.rp, 'bold', 1.5, 'right');
   // floaters
   hx.font = 'bold 14px system-ui,sans-serif'; hx.textAlign = 'center'; hx.textBaseline = 'middle';
   for (const fl of floaters) {
@@ -342,10 +392,12 @@ function drawHUD(dt) {
     prompt = near.cat === 'fossil' ? `Hold ${k} to excavate ${spName(near.sp)}` : `${k} Collect ${spName(near.sp)}`;
   }
   if (prompt) {
-    hx.font = '15px system-ui,sans-serif';
-    const w = hx.measureText(prompt).width + 28;
-    hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 124, w, 34, 10); hx.fill();
-    hx.fillStyle = '#fff'; hx.fillText(prompt, VW / 2, VH - 107);
+    hx.font = '600 15px system-ui,sans-serif';
+    const w = Math.min(VW - 40, hx.measureText(prompt).width + 40);
+    const g = hx.createLinearGradient(VW / 2 - w / 2, 0, VW / 2 + w / 2, 0);
+    g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(0.5, 'rgba(120,200,255,.55)'); g.addColorStop(1, 'rgba(120,200,255,0)');
+    hx.fillStyle = g; hx.fillRect(VW / 2 - w / 2, VH - 92, w, 1);
+    hudText(prompt, VW / 2, VH - 108, 15, '#fff', '600', 0, 'center');
   }
   // progress bars: digging by hand, deconstructing
   if (handT > 0.1 && handSpot) {
@@ -375,20 +427,19 @@ function drawHUD(dt) {
     const a = Math.min(1, arrival.t * 3, (5 - arrival.t) * 1.5);
     hx.globalAlpha = Math.max(0, a);
     hx.textAlign = 'center'; hx.textBaseline = 'middle';
-    hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - 200, VH * 0.24 - 46, 400, 100, 14); hx.fill();
-    hx.fillStyle = '#9fd8ff'; hx.font = 'bold 22px system-ui,sans-serif'; hx.fillText(arrival.title, VW / 2, VH * 0.24 - 20);
-    hx.fillStyle = arrival.ok ? '#8ef0a0' : '#ff8d8d'; hx.font = 'bold 17px system-ui,sans-serif'; hx.fillText(arrival.text, VW / 2, VH * 0.24 + 8);
-    hx.fillStyle = '#c3cbef'; hx.font = '13px system-ui,sans-serif'; hx.fillText(arrival.sub, VW / 2, VH * 0.24 + 32);
+    const by = VH * 0.24, g = hx.createLinearGradient(VW / 2 - 220, 0, VW / 2 + 220, 0);
+    g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(0.5, 'rgba(120,200,255,.7)'); g.addColorStop(1, 'rgba(120,200,255,0)');
+    hx.fillStyle = g; hx.fillRect(VW / 2 - 220, by - 46, 440, 1); hx.fillRect(VW / 2 - 220, by + 50, 440, 1);
+    hudText(arrival.title.toUpperCase(), VW / 2, by - 22, 22, HUD_C.accent, 'bold', 4, 'center');
+    hudText(arrival.text, VW / 2, by + 8, 15, arrival.ok ? HUD_C.ok : HUD_C.warn, '600', 0, 'center');
+    hudText(arrival.sub, VW / 2, by + 32, 12, '#d6def8', '500', 0, 'center');
     hx.globalAlpha = 1;
   }
   hx.textAlign = 'left';
 
   if (debugOn()) {
-    const t = ['ADMIN', adminGod() && 'god mode', adminInfO2() && '∞ O₂', adminFast() && 'fast machines', flying && 'FLYING'].filter(Boolean).join(' · ');
-    hx.font = 'bold 12px system-ui,sans-serif'; hx.textBaseline = 'middle';
-    const w = hx.measureText(t).width + 16;
-    hx.fillStyle = 'rgba(255,194,58,.9)'; rr(10, VH - 52, w, 22, 6); hx.fill();
-    hx.fillStyle = '#111'; hx.fillText(t, 18, VH - 41);
+    const t = ['ADMIN', adminGod() && 'god mode', adminInfO2() && '∞ O₂', adminFast() && 'fast machines', timeK() > 1 && `${timeK()}× time`, flying && 'FLYING'].filter(Boolean).join(' · ');
+    hudText(t, 22, VH - 44, 11, '#ffc23a', 'bold', 1.5);
   }
   hx.fillStyle = 'rgba(255,255,255,.45)'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'bottom';
   hx.fillText(`Planet Explorer v${VERSION}` + (isTouch ? '' : ' · [Esc] Pause · [C] Codex') + (debugOn() ? ` · ${Math.round(fps)} FPS · ${Math.round(resScale * 100)}% res` : ''), 10, VH - 8);

@@ -177,7 +177,7 @@ function loadSave() {
 function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 let save = loadSave();
 
-const DEFAULT_OPTS = { sens: 1, invert: false, dist: 9, fov: 70, labels: 'near', minimap: true, fps: false, quality: 'medium', shadows: true, debug: false, infO2: true, god: true, fast: true };
+const DEFAULT_OPTS = { sens: 1, invert: false, dist: 9, fov: 70, labels: 'near', minimap: true, fps: false, quality: 'medium', shadows: true, debug: false, infO2: true, god: true, fast: true, timeScale: 1 };
 let opts = Object.assign({}, DEFAULT_OPTS);
 try { Object.assign(opts, JSON.parse(localStorage.getItem(OPT_KEY)) || {}); } catch (e) {}
 function writeOpts() { try { localStorage.setItem(OPT_KEY, JSON.stringify(opts)); } catch (e) {} }

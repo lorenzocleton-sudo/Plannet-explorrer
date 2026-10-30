@@ -1,6 +1,11 @@
 # Changelog
 
 ## v0.7 (prompt 7: fixes, polish and new features)
+### Part 3 (steps 5–6)
+- **Helmet HUD**: no more boxed panels. Thin glowing bars with small line icons along the left edge (health, oxygen, temperature, backpack, scanner), the planet, air, gravity, time and altitude as plain readouts at the top, a ring radar with tick marks, outlined prompts and landing banners, and a faint visor edge. Everything has a soft shadow so it reads on snow and in the dark
+- **Menus**: restyled to match: frosted glass panels, uppercase headings, pill buttons, line icons for the tools, and smooth fade/slide transitions
+- **Admin mode**: while it's on (and only then), shortcut buttons sit on the left edge: fly (with UP/DOWN while flying), teleport, infinite O₂, god mode and time speed. The Admin tab has a time speed slider from 1× to 100× that speeds up day and night and all machines, including drills
+
 ### Part 2 (steps 3–4)
 - **Real trees**: Earth-like trees are now CC0 models (Quaternius Stylized Nature MegaKit), with their bark simplified for tablets; they sway in the wind, and from about 35 m they turn into cut-outs made from the same models
 - **Grass**: about 2.5× denser, lighter and softer blades, lit the same from both sides, and thinning out smoothly with distance

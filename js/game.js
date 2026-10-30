@@ -33,6 +33,8 @@ const FLY_SPEED = 22;
 let flying = false, touchUp = false, touchDown = false;
 const debugOn = () => !!opts.debug;
 // admin switches only count while debug mode is on
+// admin time speed (1x-100x): day/night and machines run faster
+const timeK = () => debugOn() ? clamp(opts.timeScale || 1, 1, 100) : 1;
 const adminInfO2 = () => debugOn() && opts.infO2, adminGod = () => debugOn() && opts.god, adminFast = () => debugOn() && opts.fast;
 function flyStep(dt, move, up) {
   const vUp = (keys.has(' ') || touchUp ? 1 : 0) - (keys.has('x') || keys.has('control') || touchDown ? 1 : 0);
@@ -510,7 +512,7 @@ function update(dt) {
   for (const fl of floaters) { fl.t += dt; fl.pos.addScaledVector(fl.up, 1.6 * dt); }
   floaters = floaters.filter(fl => fl.t < 1.4);
   if (arrival) { arrival.t += dt; if (arrival.t > 5) arrival = null; }
-  setDayTime(world, world.dayT + dt);
+  setDayTime(world, world.dayT + dt * timeK());
   hurtFlash = Math.max(0, hurtFlash - dt * 1.5);
 }
 

@@ -22,7 +22,7 @@ function step(now) {
   } else if (world) {
     if (!menu) update(dt);
     // machines keep running while you look at them (or the build menu)
-    if (!menu || menu === 'machine' || menu === 'build') factoryTick(dt);
+    if (!menu || menu === 'machine' || menu === 'build') factoryTick(dt * timeK());
     panelTick(dt);
     syncScene();
     if (!window.NO_RENDER) renderer.render(world.scene, camera); // NO_RENDER: automated tests only

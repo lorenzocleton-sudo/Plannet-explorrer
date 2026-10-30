@@ -59,6 +59,14 @@
   @media (max-width:760px),(max-height:520px) and (orientation:portrait){.mapwrap{flex-direction:column}#mapInfo{width:auto;max-height:40%}}
   /* admin / debug controls only exist on screen while debug mode is on */
   #pAdmin{display:none}
+  /* admin shortcuts: only on screen while admin (debug) mode is on */
+  #adminBar{display:none;position:fixed;left:12px;top:50%;transform:translateY(-50%);flex-direction:column;gap:6px;z-index:6}
+  body.debug #adminBar{display:flex}
+  body.cutscene #adminBar{display:none}
+  #adminBar button{width:58px;padding:7px 0;font-size:11px;font-weight:700;letter-spacing:1px;background:rgba(40,30,0,.35);border:1px solid rgba(255,194,58,.6);color:#ffd77a;border-radius:10px}
+  #adminBar button.on{background:rgba(255,194,58,.75);color:#1a1200}
+  #adminBar #abUp,#adminBar #abDown{display:none}
+  body.flying #adminBar #abUp,body.flying #adminBar #abDown{display:block}
   body.debug #pAdmin{display:block}
   #skipBtn{display:none;position:fixed;right:16px;bottom:calc(9vh + 12px);z-index:15;background:rgba(10,13,30,.8);border:1px solid #3b4a8a;font-size:15px;padding:10px 18px}
   body.cutscene #skipBtn{display:block}
@@ -128,6 +136,52 @@
   #hotbar .nm{font-size:10px;color:#c3cbef}
   @media (max-width:760px){body.touch #hotbar{left:8px;bottom:auto;top:34%;transform:none;flex-direction:column}}
   @media (max-width:600px){#toasts{width:calc(100% - 24px);top:auto;bottom:200px}}
+  /* ---------- v0.7 theme: clean glass panels that match the helmet HUD ---------- */
+  :root{--glass:rgba(10,18,36,.72);--glass2:rgba(255,255,255,.05);--edge:rgba(150,210,255,.22);--edge2:rgba(150,210,255,.45);--acc:#7fd6ff;--acc2:#b9a6ff;--text:#eaf2ff;--mute:#93a3c9;--ok:#8ef0b0;--bad:#ff6b7d;--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  html,body{font-family:var(--font);color:var(--text)}
+  .overlay{display:flex;visibility:hidden;opacity:0;background:radial-gradient(ellipse at center,rgba(4,10,24,.55),rgba(2,4,10,.8));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:opacity .22s ease,visibility .22s}
+  .overlay.show{visibility:visible;opacity:1}
+  .panel{background:var(--glass);border:1px solid var(--edge);border-radius:20px;padding:22px 26px;box-shadow:0 20px 60px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06);transform:translateY(10px) scale(.985);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+  .overlay.show .panel{transform:none}
+  .panel::-webkit-scrollbar{width:8px}.panel::-webkit-scrollbar-thumb{background:rgba(150,210,255,.25);border-radius:8px}
+  h1{font-weight:800;letter-spacing:8px;color:var(--text);text-shadow:0 0 24px rgba(127,214,255,.35)}
+  h2{font-size:20px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--acc)}
+  h3{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--acc2);border-bottom:1px solid var(--edge)}
+  h4{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)}
+  .sub,.muted{color:var(--mute)}
+  .ver{color:var(--acc);letter-spacing:4px}
+  kbd{background:var(--glass2);border:1px solid var(--edge);border-radius:6px;color:var(--text)}
+  button{background:linear-gradient(180deg,rgba(127,214,255,.28),rgba(80,140,255,.22));border:1px solid var(--edge2);color:#fff;border-radius:999px;padding:10px 22px;font-weight:600;letter-spacing:.5px;transition:background .15s,border-color .15s,box-shadow .15s,transform .1s}
+  button:hover{background:linear-gradient(180deg,rgba(127,214,255,.42),rgba(80,140,255,.32));box-shadow:0 0 16px rgba(127,214,255,.25)}
+  button:active{transform:scale(.97)}
+  button:disabled{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);color:rgba(234,242,255,.35);box-shadow:none}
+  button.ghost{background:var(--glass2);border:1px solid var(--edge);color:var(--text)}
+  button.ghost:hover{border-color:var(--edge2);background:rgba(127,214,255,.1)}
+  button.danger{background:rgba(255,90,110,.2);border-color:rgba(255,107,125,.5)}
+  .card,.pcard,.bcard,.tnode,#mapInfo .mcard{background:var(--glass2);border:1px solid rgba(150,210,255,.14);border-radius:14px}
+  #mapInfo .mcard.sel,.pcard.cur{border-color:var(--edge2);background:rgba(127,214,255,.1)}
+  .tnode.done{border-color:rgba(142,240,176,.6)}
+  .chip{background:rgba(255,255,255,.04);border:1px solid rgba(150,210,255,.16);border-radius:999px}
+  .opt label{color:var(--text)}
+  .opt select{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--edge);border-radius:10px;padding:7px 10px}
+  .opt input[type=range]{accent-color:var(--acc)}
+  .opt input[type=checkbox]{accent-color:var(--acc)}
+  #mapCanvas{background:#02040a;border:1px solid rgba(150,210,255,.12);border-radius:14px}
+  .pbar{background:rgba(255,255,255,.08);border:0;height:6px;border-radius:999px}
+  .pbar i{background:linear-gradient(90deg,var(--acc),var(--ok))}
+  .toast{background:rgba(10,18,36,.6);border:1px solid var(--edge);border-radius:999px;padding:7px 16px;font-weight:600;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  #hotbar{gap:8px}
+  #hotbar .slot{background:rgba(10,18,36,.35);border:1px solid rgba(150,210,255,.25);border-radius:14px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+  #hotbar .slot.sel{border-color:var(--acc);background:rgba(127,214,255,.18);box-shadow:0 0 14px rgba(127,214,255,.3)}
+  #hotbar .ico svg{width:24px;height:24px;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #hotbar .nm{letter-spacing:1px;text-transform:uppercase;font-size:9px;color:var(--mute)}
+  #touch .tb,#buildBar .tb,.tsm{background:rgba(10,18,36,.28)!important;border:1.5px solid rgba(190,230,255,.45)!important;letter-spacing:1px}
+  #touch .tb:active,#touch .tb.on{background:rgba(127,214,255,.35)!important}
+  #bPlace{background:rgba(110,240,160,.25)!important;border-color:rgba(142,240,176,.7)!important}
+  body.touch #joy{background:radial-gradient(circle,rgba(255,255,255,.04),rgba(255,255,255,.08));border:1.5px solid rgba(190,230,255,.35)}
+  #joyKnob{background:rgba(190,230,255,.28);border:1.5px solid rgba(190,230,255,.6)}
+  #fatal{background:rgba(40,10,18,.9);border:1px solid rgba(255,107,125,.6);border-radius:18px}
+  #tAct .tico svg{display:block;width:26px;height:26px;margin:0 auto 2px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -144,6 +198,10 @@
   <button class="tb big" id="tAct">USE</button>
 </div>
 <button class="tsm" id="tPause" aria-label="Pause">II</button>
+<div id="adminBar">
+  <button id="abFly">FLY</button><button id="abUp">UP</button><button id="abDown">DOWN</button>
+  <button id="abTp">TP</button><button id="abO2">O₂ ∞</button><button id="abGod">GOD</button><button id="abTime">1×</button>
+</div>
 
 <div class="overlay show" id="title">
   <div class="panel">
@@ -195,6 +253,7 @@
       <label for="aO2">Infinite oxygen</label><input type="checkbox" id="aO2">
       <label for="aGod">God mode (no damage)</label><input type="checkbox" id="aGod">
       <label for="aFast">Fast machines and free travel</label><input type="checkbox" id="aFast">
+      <label for="aTime">Time speed <span class="val" id="vTime">1×</span></label><input type="range" id="aTime" min="1" max="100" step="1" value="1">
     </div>
     <p class="muted" style="font-size:13px">Flying: on touch, JUMP goes up and INTERACT goes down. Keys: <kbd>V</kbd> fly (<kbd>Space</kbd> up, <kbd>X</kbd> down, <kbd>Shift</kbd> fast), <kbd>T</kbd> teleport.</p>
     <div class="stack">
@@ -260,33 +319,33 @@
   </div>
 </div>
 
-<script src="lib/three.min.js?v=0.7.2"></script>
-<script src="lib/GLTFLoader.js?v=0.7.2"></script>
-<script src="js/util.js?v=0.7.2"></script>
-<script src="js/data.js?v=0.7.2"></script>
-<script src="js/items.js?v=0.7.2"></script>
-<script src="js/biomes.js?v=0.7.2"></script>
-<script src="js/world.js?v=0.7.2"></script>
-<script src="js/water.js?v=0.7.2"></script>
-<script src="js/ground.js?v=0.7.2"></script>
-<script src="js/terrain.js?v=0.7.2"></script>
-<script src="js/nature.js?v=0.7.2"></script>
-<script src="js/scenery.js?v=0.7.2"></script>
-<script src="js/sky.js?v=0.7.2"></script>
-<script src="js/skybodies.js?v=0.7.2"></script>
-<script src="js/render.js?v=0.7.2"></script>
-<script src="js/game.js?v=0.7.2"></script>
-<script src="js/astronaut.js?v=0.7.2"></script>
-<script src="js/mining.js?v=0.7.2"></script>
-<script src="js/factory.js?v=0.7.2"></script>
-<script src="js/build.js?v=0.7.2"></script>
-<script src="js/sim.js?v=0.7.2"></script>
-<script src="js/panels.js?v=0.7.2"></script>
-<script src="js/tech.js?v=0.7.2"></script>
-<script src="js/ui.js?v=0.7.2"></script>
-<script src="js/starmap.js?v=0.7.2"></script>
-<script src="js/cutscene.js?v=0.7.2"></script>
-<script src="js/debug.js?v=0.7.2"></script>
-<script src="js/main.js?v=0.7.2"></script>
+<script src="lib/three.min.js?v=0.7.3"></script>
+<script src="lib/GLTFLoader.js?v=0.7.3"></script>
+<script src="js/util.js?v=0.7.3"></script>
+<script src="js/data.js?v=0.7.3"></script>
+<script src="js/items.js?v=0.7.3"></script>
+<script src="js/biomes.js?v=0.7.3"></script>
+<script src="js/world.js?v=0.7.3"></script>
+<script src="js/water.js?v=0.7.3"></script>
+<script src="js/ground.js?v=0.7.3"></script>
+<script src="js/terrain.js?v=0.7.3"></script>
+<script src="js/nature.js?v=0.7.3"></script>
+<script src="js/scenery.js?v=0.7.3"></script>
+<script src="js/sky.js?v=0.7.3"></script>
+<script src="js/skybodies.js?v=0.7.3"></script>
+<script src="js/render.js?v=0.7.3"></script>
+<script src="js/game.js?v=0.7.3"></script>
+<script src="js/astronaut.js?v=0.7.3"></script>
+<script src="js/mining.js?v=0.7.3"></script>
+<script src="js/factory.js?v=0.7.3"></script>
+<script src="js/build.js?v=0.7.3"></script>
+<script src="js/sim.js?v=0.7.3"></script>
+<script src="js/panels.js?v=0.7.3"></script>
+<script src="js/tech.js?v=0.7.3"></script>
+<script src="js/ui.js?v=0.7.3"></script>
+<script src="js/starmap.js?v=0.7.3"></script>
+<script src="js/cutscene.js?v=0.7.3"></script>
+<script src="js/debug.js?v=0.7.3"></script>
+<script src="js/main.js?v=0.7.3"></script>
 </body>
 </html>
