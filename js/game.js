@@ -32,6 +32,8 @@ let hurtFlash = 0, respawned = false, cellT = 0, tempWarnT = 0;
 const FLY_SPEED = 22;
 let flying = false, touchUp = false, touchDown = false;
 const debugOn = () => !!opts.debug;
+// admin switches only count while debug mode is on
+const adminInfO2 = () => debugOn() && opts.infO2, adminGod = () => debugOn() && opts.god, adminFast = () => debugOn() && opts.fast;
 function flyStep(dt, move, up) {
   const vUp = (keys.has(' ') || touchUp ? 1 : 0) - (keys.has('x') || keys.has('control') || touchDown ? 1 : 0);
   const fs = FLY_SPEED * (keys.has('shift') ? 3 : 1);
@@ -193,7 +195,7 @@ function die(cause) {
   toast(`${cause} Rescue drone brought you back to the lander.${lost ? ` ${lost} unsaved sample${lost > 1 ? 's' : ''} lost.` : ''}`, 'bad');
 }
 function damage(amount, cause) {
-  if (amount <= 0 || debugOn()) return; // god mode
+  if (amount <= 0 || adminGod()) return; // god mode
   player.hp -= amount;
   hurtFlash = Math.min(1, hurtFlash + amount / 40);
   if (player.hp <= 0) die(cause);
@@ -414,8 +416,8 @@ function update(dt) {
     player.o2 = Math.min(O2M, player.o2 + 50 * dt);
     player.hp = Math.min(100, player.hp + 20 * dt);
     if (bag.length) deposit();
-  } else if (debugOn() || (B.breathable && !player.inLiquid)) {
-    player.o2 = debugOn() ? O2M : Math.min(O2M, player.o2 + 10 * dt); // infinite O2 in debug mode
+  } else if (adminInfO2() || (B.breathable && !player.inLiquid)) {
+    player.o2 = adminInfO2() ? O2M : Math.min(O2M, player.o2 + 10 * dt); // infinite O2 in debug mode
   } else if (gen && player.o2 < O2M) {
     player.o2 = Math.min(O2M, player.o2 + gen.refill(Math.min(40 * dt, O2M - player.o2)));
   } else {
@@ -441,7 +443,7 @@ function update(dt) {
   const pressed = act && !actPrev;
   actPrev = act;
   // Interact (F / INTERACT): the lander, a machine, a deposit or the nearest sample - whatever is closest at hand
-  const inter = keys.has('f') || touchInteract || tapInteract;
+  const inter = !flying && (keys.has('f') || touchInteract || tapInteract);
   tapAct = tapInteract = false;
   const iPressed = inter && !interPrev;
   interPrev = inter;
@@ -509,7 +511,7 @@ function update(dt) {
 // fall damage scales with fall height AND local gravity (impact energy per kg = g·h),
 // so the same drop hurts far less on a low-gravity moon. Liquid breaks the fall.
 function onLanded(fallHeight) {
-  if (player.inLiquid || fallHeight <= 0 || debugOn()) return;
+  if (player.inLiquid || fallHeight <= 0 || adminGod()) return;
   const energy = world.body.g * fallHeight;
   const dmg = Math.round(Math.max(0, energy - SAFE_FALL_ENERGY) * FALL_DMG);
   if (dmg > 0) {

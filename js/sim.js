@@ -89,7 +89,7 @@ function solarFactor(w, b, offline) {
 // advance the whole base by dt seconds
 function simulate(w, dt, offline = false) {
   if (!offline && (factoryDirty || !w.grids)) rebuildLinks(w);
-  const debugFast = typeof debugOn === 'function' && debugOn();
+  const debugFast = typeof adminFast === 'function' && adminFast();
   // ----- power -----
   for (const g of w.grids) {
     let gen = 0;

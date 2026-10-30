@@ -1,7 +1,7 @@
 'use strict';
 // ---------- menus, codex, star map, HUD ----------
 const menus = {
-  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'), machine: $('machine'), tech: $('tech'),
+  title: $('title'), pause: $('pause'), options: $('options'), codex: $('codex'), map: $('starmap'), build: $('buildMenu'), machine: $('machine'), tech: $('tech'), admin: $('admin'),
 };
 let menuOpenedAt = 0, menu = 'title', menuBack = null, suppressUnlockPause = false, lastAutoPause = 0;
 
@@ -16,6 +16,7 @@ function showMenu(name, back = null) {
   if (name === 'build') renderBuildMenu();
   if (name === 'machine') renderPanel();
   if (name === 'tech') renderTech();
+  if (name === 'admin') renderAdmin();
   if (document.pointerLockElement) { suppressUnlockPause = true; document.exitPointerLock(); }
 }
 function resume() {
@@ -383,7 +384,7 @@ function drawHUD(dt) {
   hx.textAlign = 'left';
 
   if (debugOn()) {
-    const t = `DEBUG · god mode · ∞ O₂ · instant drills${flying ? ' · FLYING' : ''}`;
+    const t = ['ADMIN', adminGod() && 'god mode', adminInfO2() && '∞ O₂', adminFast() && 'fast machines', flying && 'FLYING'].filter(Boolean).join(' · ');
     hx.font = 'bold 12px system-ui,sans-serif'; hx.textBaseline = 'middle';
     const w = hx.measureText(t).width + 16;
     hx.fillStyle = 'rgba(255,194,58,.9)'; rr(10, VH - 52, w, 22, 6); hx.fill();

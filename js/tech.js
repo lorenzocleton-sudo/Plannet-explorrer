@@ -61,4 +61,4 @@ function fuelStores() {
   return stores;
 }
 const fuelAvailable = () => storesCount(fuelStores(), 'fuel');
-const freeTravel = () => typeof debugOn === 'function' && debugOn();
+const freeTravel = () => typeof adminFast === 'function' && adminFast();
