@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5 (prompt 5: survival factory)
+### Stage 1: survival
+- Suit oxygen tank (100, or 200 with the Bigger Oxygen Tank upgrade) drains over time unless the air is breathable; refill at the lander or (later) near an Oxygen Generator
+- Every world has a climate that follows the day/night cycle: Ruska and Xeno Prime are scorching by day, Glacia and Umbros are always freezing, airless moons freeze at night
+- Extreme heat (50 °C and up) or cold (−30 °C and below) drains health unless you have the Heat Suit / Cold Suit upgrade or are at the lander; the HUD shows the temperature
+- Fall damage stays; no hunger
+
 ## v0.4 (prompt 4)
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill

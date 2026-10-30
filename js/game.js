@@ -26,7 +26,7 @@ const playerLabel = makeLabel('Researcher', '#9fd8ff', 0.4, false);
 let bag = [], floaters = [];
 let scanT = 0, pickCd = 0, digT = 0, digTarget = null, lowWarned = false, fullWarnT = 0, time = 0;
 let arrival = null; // { t, text, ok }
-let hurtFlash = 0, respawned = false, cellT = 0;
+let hurtFlash = 0, respawned = false, cellT = 0, tempWarnT = 0;
 
 // ---------- debug / admin mode ----------
 const FLY_SPEED = 22;
@@ -46,6 +46,24 @@ function flyStep(dt, move, up) {
   player.fallTop = player.pos.length();
 }
 const SAFE_FALL_ENERGY = 45, FALL_DMG = 0.8, SUFFOCATE_DPS = 12;
+
+// ---------- survival: suit oxygen + temperature ----------
+const HOT_LIMIT = 50, COLD_LIMIT = -30;
+const hasUpgrade = id => !!save.upgrades[id];
+const o2Max = () => hasUpgrade('o2tank') ? 200 : 100;
+// air temperature where you stand: warmer when the sun is high, colder at night
+function temperatureAt(up) {
+  const T = world.body.temp, day = smooth(-0.35, 0.65, up.dot(world.sunDir));
+  return T.base + T.swing * (day * 2 - 1);
+}
+// health lost per second from heat or cold (0 when safe or protected)
+function climateDamage(temp) {
+  if (temp >= HOT_LIMIT && !hasUpgrade('heatsuit')) return 1 + (temp - HOT_LIMIT) / 12;
+  if (temp <= COLD_LIMIT && !hasUpgrade('coldsuit')) return 1 + (COLD_LIMIT - temp) / 12;
+  return 0;
+}
+// oxygen generators near you (filled in by the factory) can top up the suit too
+function o2SourceNear() { return typeof factoryO2Near === 'function' ? factoryO2Near(player.pos) : null; }
 
 // temp vectors
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _m = new THREE.Vector3();
@@ -89,7 +107,7 @@ function resetPlayer() {
   player.fwd.copy(world.landerPos).sub(player.pos);
   player.fwd.addScaledVector(d, -player.fwd.dot(d)).normalize();
   player.face.copy(player.fwd);
-  player.o2 = 100;
+  player.o2 = o2Max();
   player.hp = 100;
   player.onGround = true;
   player.fallTop = player.pos.length();
@@ -376,20 +394,32 @@ function update(dt) {
   player.face.normalize();
   player.walk += flying ? 0 : _t.length() * dt * 0.9; // _t = tangential velocity from the walk step
 
-  // oxygen & lander
+  // oxygen: drains unless the air is breathable; refill at the lander or an oxygen generator
+  const O2M = o2Max(), gen = atLander() ? null : o2SourceNear();
   if (atLander()) {
-    player.o2 = Math.min(100, player.o2 + 50 * dt);
+    player.o2 = Math.min(O2M, player.o2 + 50 * dt);
     player.hp = Math.min(100, player.hp + 20 * dt);
-    if (player.o2 > 30) lowWarned = false;
     if (bag.length) deposit();
     if (cargoCount()) unloadCargo();
   } else if (debugOn() || (B.breathable && !player.inLiquid)) {
-    player.o2 = debugOn() ? 100 : Math.min(100, player.o2 + 10 * dt); // infinite O2 in debug mode
+    player.o2 = debugOn() ? O2M : Math.min(O2M, player.o2 + 10 * dt); // infinite O2 in debug mode
+  } else if (gen && player.o2 < O2M) {
+    player.o2 = Math.min(O2M, player.o2 + gen.refill(Math.min(40 * dt, O2M - player.o2)));
   } else {
     player.o2 -= B.o2 * (player.inLiquid && !B.breathable ? 2.5 : 1) * dt;
-    if (player.o2 < 25 && !lowWarned) { lowWarned = true; toast('Oxygen low! Head back to the lander.', 'bad'); }
+    if (player.o2 < O2M * 0.25 && !lowWarned) { lowWarned = true; toast('Oxygen low! Head back to the lander or an oxygen generator.', 'bad'); }
     if (player.o2 <= 0) { player.o2 = 0; damage(SUFFOCATE_DPS * dt, 'You suffocated!'); }
   }
+  if (player.o2 > O2M * 0.3) lowWarned = false;
+  player.o2 = Math.min(player.o2, O2M);
+
+  // heat and cold hurt unless you're at the lander or wearing the right suit upgrade
+  player.temp = temperatureAt(up);
+  const hurt = atLander() ? 0 : climateDamage(player.temp);
+  if (hurt > 0) {
+    damage(hurt * dt, player.temp > 0 ? 'You overheated!' : 'You froze!');
+    if ((tempWarnT -= dt) <= 0) { tempWarnT = 8; toast(player.temp > 0 ? `Extreme heat (${Math.round(player.temp)}°C)! Go back to the lander or wait for night.` : `Extreme cold (${Math.round(player.temp)}°C)! Head back to the lander.`, 'bad'); }
+  } else tempWarnT = 0;
 
   // tools
   scanT = Math.max(0, scanT - dt);

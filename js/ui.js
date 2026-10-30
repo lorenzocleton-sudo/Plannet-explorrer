@@ -253,7 +253,7 @@ function drawHUD(dt) {
     hx.fillStyle = g; hx.fillRect(0, 0, VW, VH);
   }
   hx.textAlign = 'left';
-  hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 220, 162, 10); hx.fill();
+  hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 10, 220, 180, 10); hx.fill();
   hx.fillStyle = '#9fd8ff'; hx.font = 'bold 16px system-ui,sans-serif'; hx.textBaseline = 'top';
   hx.fillText(B.name, 20, 18);
   hx.fillStyle = '#ffd166'; hx.font = '13px system-ui,sans-serif'; hx.textAlign = 'right';
@@ -264,21 +264,26 @@ function drawHUD(dt) {
   const hpc = player.hp < 30 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#e8566b';
   bar(20, 56, 200, 16, player.hp / 100, hpc, `Health ${Math.ceil(player.hp)}`);
   const o2c = player.o2 < 25 ? (Math.sin(time * 10) > 0 ? '#ff5d5d' : '#a33') : '#3ad0ff';
-  bar(20, 78, 200, 16, player.o2 / 100, o2c, `O₂ ${Math.ceil(player.o2)}%`);
+  bar(20, 78, 200, 16, player.o2 / o2Max(), o2c, `O₂ ${Math.ceil(player.o2)} / ${o2Max()}${B.breathable ? ' · breathable air' : ''}`);
   bar(20, 100, 200, 16, bag.length / BAG_MAX, bag.length >= BAG_MAX ? '#e0703a' : '#6bbf59', `Backpack ${bag.length}/${BAG_MAX}`);
   bar(20, 122, 200, 16, 1 - scanT / SCAN_CD, scanT > 0 ? '#555d88' : '#b48cff', scanT > 0 ? `Scanner ${scanT.toFixed(1)}s` : 'Scanner ready [Q]');
-  hx.fillStyle = '#7a86b8'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
+  // temperature line: red when it's hurting you
+  const temp = player.temp ?? 0, hurtT = climateDamage(temp);
+  hx.fillStyle = hurtT > 0 ? (Math.sin(time * 8) > 0 ? '#ff6b6b' : '#ffb3b3') : temp >= HOT_LIMIT || temp <= COLD_LIMIT ? '#8ef0a0' : '#7a86b8';
+  hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
+  hx.fillText(`Temp ${Math.round(temp)}°C` + (hurtT > 0 ? (temp > 0 ? ' · TOO HOT' : ' · TOO COLD') + ` (-${hurtT.toFixed(1)} HP/s)` : temp >= HOT_LIMIT ? ' · heat suit OK' : temp <= COLD_LIMIT ? ' · cold suit OK' : ''), 20, 162);
+  hx.fillStyle = '#7a86b8';
   hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Cargo ${cargoCount()}/${CARGO_MAX} · Drills ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX}`, 20, 146);
 
   const sig = fossilSignal();
   if (sig < 50) {
     const bars = sig < 15 ? 3 : sig < 30 ? 2 : 1;
-    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 178, 220, 26, 8); hx.fill();
+    hx.fillStyle = 'rgba(10,13,30,.78)'; rr(10, 196, 220, 26, 8); hx.fill();
     hx.fillStyle = '#ffd166'; hx.font = '12px system-ui,sans-serif'; hx.textBaseline = 'middle';
-    hx.fillText('Ancient life signal', 20, 191);
+    hx.fillText('Ancient life signal', 20, 209);
     for (let i = 0; i < 3; i++) {
       hx.fillStyle = i < bars ? '#ffd166' : 'rgba(255,255,255,.15)';
-      hx.fillRect(170 + i * 14, 196 - (i + 1) * 4, 10, (i + 1) * 4);
+      hx.fillRect(170 + i * 14, 214 - (i + 1) * 4, 10, (i + 1) * 4);
     }
   }
 
