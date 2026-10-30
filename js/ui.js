@@ -156,8 +156,7 @@ function unlock(i) {
 function travel(id) {
   const b = bodyById(id);
   if (!isUnlocked(b)) return;
-  land(id);
-  resume();
+  startTravel(id);
 }
 
 // ---------- hotbar ----------
@@ -249,7 +248,7 @@ let fps = 60;
 function drawHUD(dt) {
   hx.setTransform(DPR, 0, 0, DPR, 0, 0);
   hx.clearRect(0, 0, VW, VH);
-  if (!world || menu === 'title') return;
+  if (!world || menu === 'title' || cutscene) return;
   const B = world.body;
   if (hurtFlash > 0) {
     const g = hx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.3, VW / 2, VH / 2, Math.max(VW, VH) * 0.7);

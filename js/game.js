@@ -229,7 +229,8 @@ function rotateCam(dx, dy) {
 }
 document.addEventListener('pointerlockchange', () => {
   if (!document.pointerLockElement) {
-    if (menu === null && !suppressUnlockPause) { showMenu('pause'); lastAutoPause = performance.now(); }
+    const inCutscene = typeof cutscene !== 'undefined' && (cutscene || performance.now() - csEndedAt < 600);
+    if (menu === null && !suppressUnlockPause && !inCutscene) { showMenu('pause'); lastAutoPause = performance.now(); }
     suppressUnlockPause = false;
   }
 });

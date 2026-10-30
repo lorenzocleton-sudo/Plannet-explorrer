@@ -43,6 +43,11 @@
 - Pick the planet or any of its moons as your destination; moons open up together with their planet
 - Atmosphere stays "unknown" on the map until you've landed there
 
+### Stage 8: cutscenes
+- Travelling plays a takeoff (lander lifting off with its engine flame), a flight through space (old world falling behind, new one approaching), and a landing descent onto the new world
+- Skip at any time with any key, a click/tap on the screen, or the Skip button
+- The atmosphere/gravity banner appears once you've touched down
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher
