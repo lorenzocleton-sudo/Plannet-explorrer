@@ -43,6 +43,9 @@
 - New **Interact** action (`F` on keyboard): opens the star map at the lander, places/collects/packs up a drill at a mining spot, or picks up / digs up the nearest sample with any tool selected
 - Prompts name the right control for your device (USE / INTERACT on touch, E / F on keyboard); debug fly mode moved from `F` to `V`
 
+### Part 7: admin controls hidden
+- Admin/debug buttons (fly, teleport, unlock all, UP/DOWN) and the DEBUG badge only appear while debug mode is switched on in Options; they're hidden by default from the very first frame, and the debug shortcuts do nothing while it's off
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

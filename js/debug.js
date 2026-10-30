@@ -3,8 +3,6 @@
 function applyDebug() {
   if (!debugOn()) flying = false;
   document.body.classList.toggle('debug', debugOn());
-  $('debugTools').style.display = debugOn() ? '' : 'none';
-  $('pDebug').style.display = debugOn() ? '' : 'none';
   $('tFly').classList.toggle('on', flying);
 }
 function toggleFly() {
