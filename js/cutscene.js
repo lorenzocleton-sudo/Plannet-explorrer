@@ -32,6 +32,7 @@ function startTravel(id) {
   if (document.pointerLockElement) { suppressUnlockPause = true; document.exitPointerLock(); }
   keys.clear();
   cutscene = { phase: 'takeoff', t: 0, from: world.body, dest: bodyById(id), loaded: false };
+  thrusterSound(CS_TIME.takeoff + 0.5);
   document.body.classList.add('cutscene');
   playerMesh.visible = false;
   playerLabel.visible = false;
@@ -109,7 +110,7 @@ function updateCutscene(dt) {
     camera.up.set(0, 1, 0);
     camera.position.set(17 - f * 3, 5, -6 + f * 4);
     camera.lookAt(0, 0, 9);
-    if (c.t >= CS_TIME.space) { c.phase = 'landing'; c.t = 0; }
+    if (c.t >= CS_TIME.space) { c.phase = 'landing'; c.t = 0; thrusterSound(CS_TIME.landing); }
   } else {
     // descent onto the new world
     const w = world, L = w.L, f = Math.min(1, c.t / CS_TIME.landing);

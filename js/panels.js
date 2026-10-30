@@ -8,6 +8,7 @@ function openPanel(target) {
 // the inventory a panel trades with: the lander's hold or a crate
 function panelStore() {
   if (panelTarget === 'lander') return { inv: landerInv(), cap: LANDER_CAP, name: "Lander's hold" };
+  if (panelTarget === 'rover') return { inv: roverInv(), cap: ROVER_CAP, name: 'Rover cargo' };
   if (panelTarget && panelTarget.type === 'crate') return { inv: crateInv(panelTarget), cap: panelTarget.def.storage, name: 'Crate' };
   return null;
 }
@@ -81,8 +82,8 @@ const bar2 = f => `<div class="pbar"><i style="width:${Math.round(clamp(f, 0, 1)
 
 function renderPanel() {
   const t = panelTarget;
-  if (!t || (t !== 'lander' && !world.buildings.includes(t))) { goBack(); return; }
-  if (t !== 'lander' && (factoryDirty || !world.grids)) rebuildLinks(world);
+  if (!t || (t !== 'lander' && t !== 'rover' && !world.buildings.includes(t))) { goBack(); return; }
+  if (t !== 'lander' && t !== 'rover' && (factoryDirty || !world.grids)) rebuildLinks(world);
   let h = '';
   const inv = playerInv();
   if (t === 'lander') {
@@ -90,6 +91,11 @@ function renderPanel() {
     h += `<h2>Lander</h2><p class="sub">Hold ${invTotal(hold)}/${LANDER_CAP} · ${chip('fuel', hold.fuel || 0)} on board · Your inventory ${invTotal(inv)}/${invCap()}</p>
       <div class="row" style="margin-top:0">${typeof openTech === 'function' ? '<button onclick="openTech()">Tech Tree</button>' : ''}<button onclick="showMenu('map', 'machine')">Star Map</button><button class="ghost" onclick="openBuildMenu()">Build</button></div>
       <p class="muted">The lander powers machines within ${LANDER_LINK} m (${LANDER_POWER} power) and works as storage for machines within ${LANDER_LINK} m.</p>`;
+  } else if (t === 'rover') {
+    const rc = rover.rec.charge;
+    h += `<h2>Rover</h2><p class="sub">Battery ${Math.round(rc)}%${roverPowered() ? ' · charging' : ''} · ${chip('fuel', roverInv().fuel || 0)} in cargo (each gives ${ROVER_FUEL_CHARGE}% when the battery is flat)</p>${bar2(rc / 100)}
+      <div class="row" style="margin-top:0"><button onclick="enterRover()">Drive</button></div>
+      <p class="muted">INTERACT while driving to get out. The cab is pressurised: no oxygen loss, heat or cold inside.</p>`;
   } else {
     h += `<h2>${t.def.name}</h2><p class="sub">${t.def.desc}</p>${powerLine(t)}${storageLine(t)}`;
     const s = t.rec.s;
@@ -109,13 +115,13 @@ function renderPanel() {
       h += q.length ? `<p>Crafting <b>${fabName(fabById(q[0]))}</b>${q.length > 1 ? ` (+${q.length - 1} queued)` : ''}</p>${bar2(s.prog)}` : '<p class="muted">Idle. Pick something to craft (materials come from your inventory, nearby crates and the lander).</p>';
       if (invTotal(s.out || {})) h += `<p>Finished: ${costText(s.out)} <button onclick="pxTakeOut('out')">Take</button></p>`;
       const stores = nearbyStores().concat(t.stores);
-      for (const kind of ['part', 'tool', 'upgrade']) {
-        h += `<h4>${{ part: 'Parts', tool: 'Tools', upgrade: 'Upgrades' }[kind]}</h4><div class="bgrid">`;
+      for (const kind of ['part', 'tool', 'upgrade', 'vehicle']) {
+        h += `<h4>${{ part: 'Parts', tool: 'Tools', upgrade: 'Upgrades', vehicle: 'Vehicles' }[kind]}</h4><div class="bgrid">`;
         for (const r of FAB.filter(x => x.kind === kind)) {
-          const owned = !r.out && save.upgrades[r.id], queued = q.includes(r.id), unlocked = typeof techHas !== 'function' || techHas(r.id);
+          const owned = r.kind === 'vehicle' ? roverHere() : !r.out && save.upgrades[r.id], queued = q.includes(r.id), unlocked = typeof techHas !== 'function' || techHas(r.id);
           const cost = Object.entries(r.in).map(([id, n]) => chip(id, n, storesCount(stores, id) < n ? ` <em>(have ${storesCount(stores, id)})</em>` : '')).join(' ');
           h += `<div class="bcard ${unlocked ? '' : 'locked'}"><b>${fabName(r)}</b>${r.desc ? `<p class="muted">${r.desc}</p>` : ''}<div class="chips">${cost}</div>
-            ${owned ? '<button disabled>Installed</button>' : queued && !r.out ? '<button disabled>Queued</button>' : !unlocked ? '<button disabled>Research it in the tech tree</button>'
+            ${owned ? `<button disabled>${r.kind === 'vehicle' ? 'Built' : 'Installed'}</button>` : queued && !r.out ? '<button disabled>Queued</button>' : !unlocked ? '<button disabled>Research it in the tech tree</button>'
               : `<button ${canAfford(r.in, stores) ? '' : 'disabled'} onclick="pxCraft('${r.id}')">Craft (${r.time}s)</button>`}</div>`;
         }
         h += '</div>';
@@ -140,7 +146,7 @@ function renderPanel() {
         <button class="sm2" onclick="pxStoreRaw()">Deposit all ores</button> <button class="ghost sm2" onclick="pxStore(null, 9999)">Store everything</button></div>
       <div><h4>${st.name} (${invTotal(st.inv)}/${st.cap})</h4>${itemRows(st.inv, id => `<button class="ghost sm2" onclick="pxTake('${id}', 10)">Take 10</button><button class="ghost sm2" onclick="pxTake('${id}', 999)">All</button>`)}</div></div>`;
   }
-  h += `<div class="row">${t !== 'lander' ? '<button class="danger" onclick="pxRemove()">Deconstruct</button>' : ''}<button class="ghost" onclick="goBack()">Close</button></div>`;
+  h += `<div class="row">${t !== 'lander' && t !== 'rover' ? '<button class="danger" onclick="pxRemove()">Deconstruct</button>' : ''}<button class="ghost" onclick="goBack()">Close</button></div>`;
   // only touch the DOM when something changed, so a tap is never lost to a redraw
   if (h !== panelHtml) { $('machineBody').innerHTML = h; panelHtml = h; }
 }

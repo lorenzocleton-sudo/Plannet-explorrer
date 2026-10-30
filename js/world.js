@@ -426,6 +426,7 @@ function genBody(body) {
 
   spawnSpots(w);
   loadBase(w);
+  loadRover(w);
   initScenery(w);
   w.groundTint = new THREE.Color().fromArray(colorAtDir(w.L));
   return w;

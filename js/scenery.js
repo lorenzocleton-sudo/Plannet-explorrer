@@ -320,21 +320,21 @@ function sceneryColliders(kind, K, model, pos, q, s, sy) {
 }
 // call with the player's position before ground contact: pushes out of anything you walk into and
 // returns the radius of the top of a rock you are standing on (0 if none)
-function sceneryContact(pos, up) {
+function sceneryContact(pos, up, rad = 0.3, vel = player.vel) {
   let floor = 0;
   for (const c of SCN.colliders) {
     _st.subVectors(pos, c.pos);
     const h = _st.dot(up);
     _st.addScaledVector(up, -h); // horizontal offset
-    const d = _st.length(), r = c.r + 0.3;
+    const d = _st.length(), r = c.r + rad;
     if (d >= r) continue;
     if (h >= c.top - 0.45) { floor = Math.max(floor, c.base + c.top); continue; } // on top (or stepping up)
     if (h < -1) continue;                                                          // well below it (caves, overhangs)
     if (d < 1e-4) tangentOf(up, _st).multiplyScalar(1e-4); // dead centre: push out any way
     const dd = Math.max(d, 1e-4);
     pos.addScaledVector(_st, (r - dd) / dd);
-    const vn = player.vel.dot(_st) / dd;
-    if (vn < 0) player.vel.addScaledVector(_st, -vn / dd);
+    const vn = vel.dot(_st) / dd;
+    if (vn < 0) vel.addScaledVector(_st, -vn / dd);
   }
   return floor;
 }

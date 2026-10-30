@@ -1,6 +1,13 @@
 # Changelog
 
 ## v0.7 (prompt 7: fixes, polish and new features)
+### Part 4 (steps 7–8)
+- **Sound** (all generated in the browser, no audio files): footsteps that change with the ground (grass, dirt, sand, snow, rock, water, the lander's metal pad), gusty wind that grows with height and thick air, waves near the sea, drills grinding and machines humming near you, lander thrusters during takeoff and landing, and soft UI clicks. On airless worlds there's no wind: you only hear muffled thuds through your boots and your own breathing in the suit
+- **Music**: calm generative ambient music with its own mood per kind of world (warm on Verdara, sparse on Ruska, glassy on Glacia, strange on Xeno Prime, low and uneasy on Umbros, empty bells on moons)
+- **Volume sliders** in Options: master, music and effects
+- **Rover**: research it in the tech tree, then craft it at a Fabricator; it rolls out beside it (one per world). INTERACT opens its panel (Drive, battery, 120-slot cargo hold). It drives with the same joystick, follows each world's gravity (it leaves the ground over crests and bounces on light moons), tilts with the ground, slides on ice, and bumps into trees and rocks. The battery recharges near your power grid or the lander; when it's flat the rover burns rocket fuel from its cargo. The cab is pressurised (no oxygen loss, heat or cold), headlights come on at night, and it's saved per world
+- Lifeless and alien worlds no longer use the Earth grass texture for their ground
+
 ### Part 3 (steps 5–6)
 - **Helmet HUD**: no more boxed panels. Thin glowing bars with small line icons along the left edge (health, oxygen, temperature, backpack, scanner), the planet, air, gravity, time and altitude as plain readouts at the top, a ring radar with tick marks, outlined prompts and landing banners, and a faint visor edge. Everything has a soft shadow so it reads on snow and in the dark
 - **Menus**: restyled to match: frosted glass panels, uppercase headings, pill buttons, line icons for the tools, and smooth fade/slide transitions

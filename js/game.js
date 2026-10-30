@@ -372,7 +372,8 @@ function update(dt) {
   if (len > 1) move.divideScalar(len);
 
   const nu = _u; // player's "up" after moving (set by both branches)
-  if (flying) flyStep(dt, move, up);
+  if (rover.driving) { driveRover(dt, f, r); nu.copy(player.pos).normalize(); }
+  else if (flying) flyStep(dt, move, up);
   else {
     // split velocity into radial (up/down) and tangential parts
     const spd = WALK_SPEED * B.speed * (player.inLiquid ? 0.55 : 1);
@@ -424,6 +425,8 @@ function update(dt) {
     player.o2 = Math.min(O2M, player.o2 + 50 * dt);
     player.hp = Math.min(100, player.hp + 20 * dt);
     if (bag.length) deposit();
+  } else if (rover.driving) { // the rover's cab is pressurised
+    player.o2 = Math.min(O2M, player.o2 + 6 * dt);
   } else if (adminInfO2() || (B.breathable && !player.inLiquid)) {
     player.o2 = adminInfO2() ? O2M : Math.min(O2M, player.o2 + 10 * dt); // infinite O2 in debug mode
   } else if (gen && player.o2 < O2M) {
@@ -438,7 +441,7 @@ function update(dt) {
 
   // heat and cold hurt unless you're at the lander or wearing the right suit upgrade
   player.temp = temperatureAt(up);
-  const hurt = atLander() ? 0 : climateDamage(player.temp);
+  const hurt = atLander() || rover.driving ? 0 : climateDamage(player.temp);
   if (hurt > 0) {
     damage(hurt * dt, player.temp > 0 ? 'You overheated!' : 'You froze!');
     if ((tempWarnT -= dt) <= 0) { tempWarnT = 8; toast(player.temp > 0 ? `Extreme heat (${Math.round(player.temp)}°C)! Go back to the lander or wait for night.` : `Extreme cold (${Math.round(player.temp)}°C)! Head back to the lander.`, 'bad'); }
@@ -463,11 +466,13 @@ function update(dt) {
     if (tid === 'build' && pressed) openBuildMenu();
     // Interact: lander > machine > deposit (dig by hand) > sample
     const mach = nearestBuilding();
-    if (iPressed && atLander()) openPanel('lander');
+    if (rover.driving) { if (iPressed) exitRover(); }
+    else if (iPressed && atLander()) openPanel('lander');
+    else if (iPressed && nearRover()) openPanel('rover');
     else if (iPressed && mach) openPanel(mach);
     else if (spot && inter && !spot.machine && !mach) handMine(spot, inter, dt);
     if (!inter) handMine(null, false, dt);
-    if (near && ((act && tid === 'collector') || (inter && !spot && !nearestBuilding()))) {
+    if (!rover.driving && near && ((act && tid === 'collector') || (inter && !spot && !nearestBuilding()))) {
       if (near.cat === 'fossil') {
         if (digTarget !== near) { digTarget = near; digT = 0; }
         digT += dt;
@@ -540,8 +545,8 @@ function syncScene() {
   updateAstronaut();
 
   // third-person camera orbiting behind the heading
-  const head = _b.copy(player.pos).addScaledVector(up, 1.6);
-  const d = opts.dist, p = camState.pitch;
+  const head = _b.copy(player.pos).addScaledVector(up, rover.driving ? 1.6 : 1.6);
+  const d = rover.driving ? Math.max(opts.dist, 11) : opts.dist, p = camState.pitch;
   const cam = _c.copy(head).addScaledVector(player.fwd, -d * Math.cos(p)).addScaledVector(up, d * Math.sin(p));
   const cd = _a.copy(cam).normalize();
   const minR = surfaceR(cd) + 0.8;
@@ -556,7 +561,10 @@ function syncScene() {
   if (world.clouds) world.clouds.rotation.y = time * B.atmo.wind;
   STARS.position.copy(camera.position);
   // helmet light points where you're looking, a little down
-  updateLights(world, up, _a.copy(player.pos).addScaledVector(up, 1.7), _c.copy(player.pos).addScaledVector(player.fwd, 14).addScaledVector(up, -2));
+  if (rover.driving) updateLights(world, up, _a.copy(rover.pos).addScaledVector(rover.fwd, 2).addScaledVector(up, 0.8), _c.copy(rover.pos).addScaledVector(rover.fwd, 22).addScaledVector(up, -1.5));
+  else updateLights(world, up, _a.copy(player.pos).addScaledVector(up, 1.7), _c.copy(player.pos).addScaledVector(player.fwd, 14).addScaledVector(up, -2));
+  placeRoverMesh(1 / 60);
+  if (rover.driving) { playerMesh.visible = false; playerLabel.visible = false; }
   // low sun: shadows get long, so the shadow area grows and moves the way they fall
   const sa = up.dot(world.sunDir), low = 1 - smooth(0.08, 0.45, sa), half = detail().shadowR * (1 + low);
   const sc = world.sun.shadow.camera;

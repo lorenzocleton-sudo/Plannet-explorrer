@@ -16,6 +16,7 @@ const FAB = [
   { id: 'fastdrill', kind: 'upgrade', name: 'Faster Drills', in: { gear: 4, circuit: 2 }, time: 10, desc: 'All drills mine twice as fast.' },
   { id: 'helmet', kind: 'upgrade', name: 'Better Helmet Light', in: { circuit: 2, wafer: 1 }, time: 6, desc: 'Brighter, wider helmet light that reaches further.' },
   { id: 'inventory', kind: 'upgrade', name: 'Bigger Backpack', in: { iron_plate: 6, gear: 2 }, time: 8, desc: 'Inventory +40.' },
+  { id: 'rover', kind: 'vehicle', name: 'Rover', in: { iron_plate: 14, gear: 6, circuit: 4, copper_wire: 8 }, time: 25, desc: 'Drivable rover with a 120-slot cargo hold. Runs on a battery (charges near power) or rocket fuel.' },
   { id: 'inventory2', kind: 'upgrade', name: 'Cargo Exoframe', in: { iron_plate: 10, gear: 4, void_crystal: 1 }, time: 12, desc: 'Inventory +60 more.' },
 ];
 const fabById = id => FAB.find(r => r.id === id);
@@ -150,6 +151,7 @@ function simulate(w, dt, offline = false) {
         if (work < need) { s.prog = (s.prog || 0) + work / r.time; break; }
         work -= need; s.prog = 0; q.shift();
         if (r.out) bufAdd(s, 'out', r.out);
+        else if (r.kind === 'vehicle') spawnRover(w, b);
         else { save.upgrades[r.id] = true; if (w === world && !offline) toast(`${fabName(r)} installed! ${r.desc}`, 'new'); }
       }
       flushBuf(b, 'out');

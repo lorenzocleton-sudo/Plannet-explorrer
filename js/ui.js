@@ -60,7 +60,7 @@ function renderPause() {
 }
 
 // ---------- options ----------
-const OPT_IDS = ['oSens', 'oInvert', 'oDist', 'oFov', 'oLabels', 'oMinimap', 'oQuality', 'oShadows'];
+const OPT_IDS = ['oSens', 'oInvert', 'oDist', 'oFov', 'oLabels', 'oMinimap', 'oQuality', 'oShadows', 'oVolMaster', 'oVolMusic', 'oVolSfx'];
 function renderOptions() {
   $('oSens').value = opts.sens; $('vSens').textContent = opts.sens.toFixed(1);
   $('oInvert').checked = opts.invert;
@@ -70,6 +70,7 @@ function renderOptions() {
   $('oMinimap').checked = opts.minimap;
   $('oQuality').value = opts.quality;
   $('oShadows').checked = opts.shadows;
+  for (const [id, k] of [['oVolMaster', 'volMaster'], ['oVolMusic', 'volMusic'], ['oVolSfx', 'volSfx']]) { $(id).value = opts[k]; $('v' + id.slice(1)).textContent = opts[k] + '%'; }
   $('oDebug').checked = opts.debug;
   if (typeof applyDebug === 'function') applyDebug();
 }
@@ -82,7 +83,8 @@ function optChanged() {
   opts.minimap = $('oMinimap').checked;
   opts.quality = $('oQuality').value;
   opts.shadows = $('oShadows').checked;
-  writeOpts(); applyGraphics(); renderOptions();
+  opts.volMaster = +$('oVolMaster').value; opts.volMusic = +$('oVolMusic').value; opts.volSfx = +$('oVolSfx').value;
+  writeOpts(); applyGraphics(); applyVolumes(); renderOptions();
 }
 for (const id of OPT_IDS) $(id).addEventListener('input', optChanged);
 $('oBack').onclick = goBack;
@@ -229,6 +231,7 @@ function hudIcon(name, x, y, color) {
   else if (name === 'temp') { hx.moveTo(0, -6); hx.lineTo(0, 2); hx.stroke(); hx.beginPath(); hx.arc(0, 4, 2.6, 0, Math.PI * 2); hx.fill(); }
   else if (name === 'pack') { hx.rect(-5, -4, 10, 9); hx.moveTo(-3, -4); hx.lineTo(-3, -6); hx.lineTo(3, -6); hx.lineTo(3, -4); hx.moveTo(-5, 0); hx.lineTo(5, 0); hx.stroke(); }
   else if (name === 'scan') { hx.arc(0, 0, 6, -0.9, 0.9); hx.moveTo(3, 0); hx.arc(0, 0, 3, -0.9, 0.9); hx.stroke(); hx.beginPath(); hx.arc(0, 0, 1.3, 0, Math.PI * 2); hx.fill(); }
+  else if (name === 'rover') { hx.rect(-6, -4, 12, 5); hx.moveTo(-3, -4); hx.lineTo(-1, -7); hx.lineTo(3, -7); hx.lineTo(4, -4); hx.stroke(); hx.beginPath(); hx.arc(-3.5, 3.5, 2, 0, Math.PI * 2); hx.arc(3.5, 3.5, 2, 0, Math.PI * 2); hx.fill(); }
   else if (name === 'life') { hx.moveTo(-6, 0); hx.lineTo(-3, 0); hx.lineTo(-1, -5); hx.lineTo(1.5, 5); hx.lineTo(3.5, 0); hx.lineTo(6, 0); hx.stroke(); }
   hx.restore();
 }
@@ -327,6 +330,10 @@ function drawHUD(dt) {
   row('temp', clamp((temp + 80) / 160, 0, 1), hurtT > 0 ? HUD_C.bad : HUD_C.temp,
     `${Math.round(temp)}°C` + (hurtT > 0 ? (temp > 0 ? ' · TOO HOT' : ' · TOO COLD') : temp >= HOT_LIMIT ? ' · HEAT SUIT' : temp <= COLD_LIMIT ? ' · COLD SUIT' : ''), hurtT > 0);
   row('pack', bag.length / BAG_MAX, bag.length >= BAG_MAX ? HUD_C.warn : HUD_C.pack, `${bag.length}/${BAG_MAX} · INV ${invTotal(playerInv())}/${invCap()}`);
+  if (rover.driving) {
+    const vr = rover.vel.dot(player.up), sp = Math.sqrt(Math.max(0, rover.vel.lengthSq() - vr * vr));
+    row('rover', rover.rec.charge / 100, rover.rec.charge < 15 ? HUD_C.warn : HUD_C.o2, `${Math.round(rover.rec.charge)}% · ${Math.round(sp * 3.6)} KM/H${roverPowered() ? ' · CHARGING' : ''}`, rover.rec.charge < 10);
+  }
   row('scan', 1 - scanT / SCAN_CD, scanT > 0 ? HUD_C.dim : HUD_C.scan, scanT > 0 ? `${scanT.toFixed(1)}s` : (isTouch ? 'READY' : 'READY [Q]'));
   const sig = fossilSignal();
   if (sig < 50) {

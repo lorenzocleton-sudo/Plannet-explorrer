@@ -29,6 +29,7 @@ function step(now) {
     adaptResolution(raw);
   }
   if (!cutscene) drawHUD(dt);
+  updateAudio(dt);
   if (menu === 'map') drawStarMap(dt);
 }
 renderer.domElement.addEventListener('webglcontextlost', e => {

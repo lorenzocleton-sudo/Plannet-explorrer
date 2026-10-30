@@ -6,6 +6,7 @@ const TECH = [
   { id: 'battery', tier: 3, name: 'Energy Storage', cost: 15, req: ['fab'], unlocks: ['battery'], desc: 'Batteries keep machines running at night.' },
   { id: 'o2gen', tier: 3, name: 'Life Support', cost: 20, req: ['fab'], unlocks: ['o2gen'], desc: 'Oxygen Generator: refill your suit away from the lander.' },
   { id: 'refinery', tier: 3, name: 'Fuel Refining', cost: 30, req: ['fab'], unlocks: ['refinery'], desc: 'Fuel Refinery: make Rocket Fuel to travel to other worlds.' },
+  { id: 'rover', tier: 3, name: 'Rover', cost: 20, req: ['fab'], unlocks: ['rover'], desc: 'A drivable rover with a cargo hold (craft at a Fabricator).' },
   { id: 'helmet', tier: 3, name: 'Better Helmet Light', cost: 10, req: ['fab'], unlocks: ['helmet'], desc: 'Upgrade (craft at a Fabricator).' },
   { id: 'inventory', tier: 3, name: 'Bigger Backpack', cost: 20, req: ['fab'], unlocks: ['inventory'], desc: 'Upgrade: inventory +40.' },
   { id: 'coldsuit', tier: 3, name: 'Cold Suit', cost: 25, req: ['fab'], unlocks: ['coldsuit'], desc: 'Upgrade: survive extreme cold.' },

@@ -182,6 +182,14 @@ function planetLayers(body, h, slope, f) {
   _gl.fill(0);
   for (let i = 0; i < NB; i++) if (_bw[i] > 1e-3) addLayers(BIOME_LAYERS[i], _bw[i]);
   const blendTo = (l, t) => { if (t <= 0) return; for (let i = 0; i < NL; i++) _gl[i] *= 1 - t; _gl[l] += t; };
+  // the grass texture only belongs where Earth plants grow; elsewhere it's bare soil or alien growth
+  const prof = floraProfile(body);
+  if (prof !== 'earth' && prof !== 'earthCold' && _gl[L_GRASS] > 0) {
+    const g = _gl[L_GRASS];
+    _gl[L_GRASS] = 0;
+    if (prof === 'alienWet') _gl[L_ALIEN] += g;
+    else { _gl[L_DIRT] += g * 0.5; _gl[L_SAND] += g * 0.3; _gl[L_GRAVEL] += g * 0.2; }
+  }
   blendTo(L_SAND, f.beach);
   if (h < 0) blendTo(L_GRAVEL, smooth(-2, -25, h) * 0.6);
   blendTo(L_ROCK, f.rock);
