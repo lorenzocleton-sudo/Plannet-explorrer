@@ -124,7 +124,7 @@ function pickSpecies(r, list) {
 // ---------- save + options ----------
 const SAVE_KEY = 'planetExplorer.save.v1', OPT_KEY = 'planetExplorer.options.v1';
 function defaultSave() {
-  return { ver: 4, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, drills: {}, res: {}, upgrades: {} };
+  return { ver: 5, rp: 0, unlocked: [0], current: 'p0', codex: {}, collected: {}, atmo: {}, drills: {}, upgrades: {}, inv: {}, lander: { items: {} } };
 }
 function loadSave() {
   try {
@@ -141,6 +141,15 @@ function loadSave() {
         s.ver = 4;
       }
       delete s.terra; // terraforming was removed in v0.4
+      if (s.ver < 5) { // v0.5: old mined resources move into the lander's hold under their new names
+        const map = { iron: 'iron_ore', copper: 'copper_ore', silicon: 'silicon', water: 'ice' }, items = {};
+        for (const k in s.res || {}) if (map[k]) items[map[k]] = (items[map[k]] || 0) + s.res[k];
+        s.lander = { items };
+        s.inv = {};
+        s.drills = {};
+        delete s.res;
+        s.ver = 5;
+      }
       return Object.assign(defaultSave(), s);
     }
   } catch (e) {}

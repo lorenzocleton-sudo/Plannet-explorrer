@@ -171,9 +171,8 @@ function deposit() {
 // health hit 0: respawn at the lander and lose everything carried but not yet deposited
 function die(cause) {
   for (const it of bag) { it.taken = false; if (!it.unloaded) it.mesh.visible = true; }
-  const lost = bag.length + cargoCount();
+  const lost = bag.length;
   bag = [];
-  cargo = {};
   resetPlayer();
   respawned = true;
   lowWarned = false;
@@ -400,7 +399,7 @@ function update(dt) {
     player.o2 = Math.min(O2M, player.o2 + 50 * dt);
     player.hp = Math.min(100, player.hp + 20 * dt);
     if (bag.length) deposit();
-    if (cargoCount()) unloadCargo();
+    if (rawCarried()) unloadCargo();
   } else if (debugOn() || (B.breathable && !player.inLiquid)) {
     player.o2 = debugOn() ? O2M : Math.min(O2M, player.o2 + 10 * dt); // infinite O2 in debug mode
   } else if (gen && player.o2 < O2M) {
@@ -435,8 +434,10 @@ function update(dt) {
   const near = nearestItem(), spot = nearestSpot();
   if (tid === 'scanner' && pressed) doScan();
   if (iPressed && atLander()) openStarMap();
+  else if (spot && inter && !drillState(spot)) handMine(spot, inter, dt);
   else if (spot && (inter || tid === 'drill')) useDrill(act || inter, pressed || iPressed, dt);
   else if (tid === 'drill') useDrill(act, pressed, dt);
+  if (!inter) handMine(null, false, dt);
   if (near && ((act && tid === 'collector') || (inter && !spot))) {
     if (near.cat === 'fossil') {
       if (digTarget !== near) { digTarget = near; digT = 0; }

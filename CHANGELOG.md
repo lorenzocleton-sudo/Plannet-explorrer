@@ -7,6 +7,13 @@
 - Extreme heat (50 °C and up) or cold (−30 °C and below) drains health unless you have the Heat Suit / Cold Suit upgrade or are at the lander; the HUD shows the temperature
 - Fall damage stays; no hunger
 
+### Stage 2: resources
+- Mining spots now give Iron Ore, Copper Ore, Silicon and Ice, plus rare crystals on harder worlds: Ember Crystal (Ruska onwards), Void Crystal (Umbros system) and Xeno Crystal (Xeno Prime system)
+- Planets mostly give metals; moons mostly give ice and silicon; crystals sit deep and need a drill
+- Every world has one iron, copper, silicon and ice spot within a short walk of the lander
+- Hold Interact at a spot to dig common ores by hand
+- New inventory (60 slots, more with upgrades) and lander hold (400): raw resources unload into the lander automatically; old saves' resources move into the lander under their new names
+
 ## v0.4 (prompt 4)
 ### Part 0: Terraform tool removed
 - The Terraform tool, its hotbar slot, its controls (R / right click, brush keys, touch RAISE/LOWER/BRUSH) and all saved terrain edits are gone; the hotbar now has Scanner, Collector and Drill

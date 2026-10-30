@@ -47,7 +47,7 @@ $('pQuit').onclick = () => { writeSave(); showMenu('title'); };
 for (const k of ['codex', 'map']) menus[k].addEventListener('click', e => { if (e.target === menus[k]) goBack(); });
 
 function renderPause() {
-  $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Cargo ${cargoCount()}/${CARGO_MAX}`;
+  $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Inventory ${invTotal(playerInv())}/${invCap()}`;
   const pm = $('pMap');
   pm.disabled = !atLander();
   pm.textContent = atLander() ? 'Star Map' : 'Star Map (go to lander)';
@@ -130,10 +130,10 @@ function codexSection(body) {
 }
 function renderCodex() {
   let h = `<h2>Research Codex</h2><p class="sub">Research Points: <b>${save.rp}</b> &nbsp;·&nbsp; Backpack: ${bag.length}/${BAG_MAX} (deposit at lander to analyze)</p>`;
-  const owned = RESOURCES.filter(r => save.res[r.id] || cargo[r.id]);
-  h += `<h3>Mined resources</h3>`;
-  h += owned.length ? `<div class="grid">${owned.map(r => `<div class="card"><span style="width:20px;height:20px;border-radius:4px;background:${r.color};flex:none"></span><div><b>${r.name}</b>${save.res[r.id] || 0} stored${cargo[r.id] ? ` · ${cargo[r.id]} carried` : ''} · <span class="muted">${TIER_NAMES[r.tier]}</span></div></div>`).join('')}</div>`
-    : '<p class="muted">Nothing mined yet. Place drills on mining spots with the Drill tool.</p>';
+  const inv = playerInv(), hold = landerInv(), ids = Object.keys(ITEMS).filter(id => inv[id] || hold[id]);
+  h += `<h3>Resources</h3><p class="muted" style="margin:0 0 6px">Inventory ${invTotal(inv)}/${invCap()} · Lander hold ${invTotal(hold)}/${LANDER_CAP}</p>`;
+  h += ids.length ? `<div class="grid">${ids.map(id => `<div class="card"><span style="width:20px;height:20px;border-radius:4px;background:${ITEMS[id].color};flex:none"></span><div><b>${itemName(id)}</b>${inv[id] || 0} carried · ${hold[id] || 0} in lander</div></div>`).join('')}</div>`
+    : '<p class="muted">Nothing yet. Dig at mining spots by hand or with a drill.</p>';
   const cur = bodyById(save.current);
   h += codexSection(cur);
   for (const b of BODIES) if (b !== cur && save.atmo[b.id]) h += codexSection(b);
@@ -273,7 +273,7 @@ function drawHUD(dt) {
   hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
   hx.fillText(`Temp ${Math.round(temp)}°C` + (hurtT > 0 ? (temp > 0 ? ' · TOO HOT' : ' · TOO COLD') + ` (-${hurtT.toFixed(1)} HP/s)` : temp >= HOT_LIMIT ? ' · heat suit OK' : temp <= COLD_LIMIT ? ' · cold suit OK' : ''), 20, 162);
   hx.fillStyle = '#7a86b8';
-  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Cargo ${cargoCount()}/${CARGO_MAX} · Drills ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX}`, 20, 146);
+  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Inventory ${invTotal(playerInv())}/${invCap()} · Drills ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX}`, 20, 146);
 
   const sig = fossilSignal();
   if (sig < 50) {

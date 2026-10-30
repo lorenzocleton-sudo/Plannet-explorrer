@@ -1,36 +1,34 @@
 'use strict';
 // ---------- mining spots + drills ----------
-// Rarer resources sit deeper (slower to drill) and only show up on harder worlds.
-const RESOURCES = [
-  { id: 'iron', name: 'Iron', tier: 0, color: '#b9c0cc', value: 2 },
-  { id: 'copper', name: 'Copper', tier: 0, color: '#e08a4a', value: 2 },
-  { id: 'silicon', name: 'Silicon', tier: 0, color: '#8fb0c8', value: 2 },
-  { id: 'water', name: 'Water Ice', tier: 0, color: '#bff0ff', value: 3, iceOnly: true },
-  { id: 'titanium', name: 'Titanium', tier: 1, color: '#dfe6f2', value: 5 },
-  { id: 'cobalt', name: 'Cobalt', tier: 1, color: '#5b7cff', value: 5 },
-  { id: 'gold', name: 'Gold', tier: 2, color: '#ffd34d', value: 10 },
-  { id: 'platinum', name: 'Platinum', tier: 2, color: '#eef0ff', value: 12 },
-  { id: 'iridium', name: 'Iridium', tier: 3, color: '#c49bff', value: 25 },
-  { id: 'xenocrystal', name: 'Xenocrystal', tier: 4, color: '#5dffb0', value: 50 },
-];
+// Planets mostly give metals, moons mostly ice and silicon. Rare crystals only appear on harder
+// worlds and sit deep (slow to drill, too deep to dig by hand).
+const SPOT_RES = {
+  iron_ore: { tier: 0 }, copper_ore: { tier: 0 }, silicon: { tier: 0 }, ice: { tier: 0 },
+  ember: { tier: 2, minDiff: 1 }, void_crystal: { tier: 3, minDiff: 3 }, xeno_crystal: { tier: 4, minDiff: 4 },
+};
 const TIER_NAMES = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Exotic'];
-const DRILLS_MAX = 3, DRILL_CAP = 8, CARGO_MAX = 40, DRILL_REACH = 4, PICKUP_TIME = 1.2;
-const resById = id => RESOURCES.find(r => r.id === id);
-
-let cargo = {};
-const cargoCount = () => Object.values(cargo).reduce((a, b) => a + b, 0);
+const DRILLS_MAX = 3, DRILL_CAP = 8, DRILL_REACH = 4, PICKUP_TIME = 1.2, HAND_MINE_TIME = 2;
+const spotRes = id => ({ id, name: itemName(id), color: ITEMS[id].color, tier: SPOT_RES[id].tier });
 
 // how "hard" a world is: later planets (and their moons) roll rarer, deeper deposits
 const difficulty = b => b.type === 'planet' ? b.idx : b.idx + 0.5;
-function rollResource(rnd, body) {
-  const diff = difficulty(body), maxTier = Math.min(4, 1 + Math.floor(diff));
-  const pool = RESOURCES.filter(r => r.tier <= maxTier && (!r.iceOnly || body.ice || body.name === 'Glacia'));
-  let tot = 0;
-  const ws = pool.map(r => { const w = Math.pow(0.42, r.tier) * (1 + diff * 0.35 * r.tier); tot += w; return w; });
-  let x = rnd() * tot;
-  for (let i = 0; i < pool.length; i++) { x -= ws[i]; if (x <= 0) return pool[i]; }
-  return pool[0];
+function spotWeights(body) {
+  const diff = difficulty(body), w = body.type === 'planet'
+    ? { iron_ore: 0.36, copper_ore: 0.28, silicon: 0.14, ice: body.name === 'Glacia' ? 0.35 : 0.12 }
+    : { iron_ore: 0.08, copper_ore: 0.05, silicon: 0.4, ice: body.ice ? 0.55 : 0.32 };
+  for (const id of ['ember', 'void_crystal', 'xeno_crystal']) if (diff >= SPOT_RES[id].minDiff && (id !== 'void_crystal' || body.idx === 3)) w[id] = 0.06;
+  return w;
 }
+function rollResource(rnd, body) {
+  const w = spotWeights(body);
+  let tot = 0;
+  for (const id in w) tot += w[id];
+  let x = rnd() * tot;
+  for (const id in w) { x -= w[id]; if (x <= 0) return spotRes(id); }
+  return spotRes('iron_ore');
+}
+// depth in metres: common ores are shallow, crystals deep
+const spotDepth = (res, rnd) => res.tier === 0 ? Math.round(4 + rnd() * 10) : Math.round(25 + res.tier * 12 + rnd() * 15);
 
 const SPOT_GEO = new THREE.CylinderGeometry(1.7, 1.9, 0.18, 16).translate(0, 0.09, 0);
 const ORE_GEO = new THREE.OctahedronGeometry(0.35).translate(0, 0.35, 0);
@@ -47,7 +45,7 @@ const resMatCache = {};
 function resMat(r) {
   if (resMatCache[r.id]) return resMatCache[r.id];
   const c = new THREE.Color(r.color);
-  const m = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.25 + r.tier * 0.1, flatShading: true, roughness: 0.4 });
+  const m = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.25 + r.tier * 0.12, flatShading: true, roughness: 0.4 });
   sharedMats.add(m);
   return (resMatCache[r.id] = m);
 }
@@ -58,20 +56,22 @@ function spotLabelText(sp) { return `${sp.res.name} deposit · ${sp.depth} m dee
 const SPOT_SHOW = 500, SPOT_HIDE = 650;
 function spawnSpots(w) {
   const body = w.body, R = w.R, rnd = mulberry32(body.seed * 19 + 77), d = new THREE.Vector3(), t1 = new THREE.Vector3(), t2 = new THREE.Vector3();
-  const count = Math.max(12, Math.round(4 * Math.PI * R * R / 2.5e6)), nearby = 3;
+  const count = Math.max(12, Math.round(4 * Math.PI * R * R / 2.5e6));
+  // one of each basic resource within a short walk of the lander, so a base is always possible
+  const starters = ['iron_ore', 'copper_ore', 'silicon', 'ice'], nearby = starters.length;
   w.spots = [];
   tangentOf(w.L, t1); t2.copy(w.L).cross(t1);
   for (let tries = 0; w.spots.length < count && tries < count * 20; tries++) {
     if (w.spots.length < nearby) { // a few within a short walk of the lander
-      const a = rnd() * Math.PI * 2, dist = 60 + rnd() * 160;
+      const a = rnd() * Math.PI * 2, dist = 35 + rnd() * 110;
       d.copy(w.L).multiplyScalar(R).addScaledVector(t1, Math.cos(a) * dist).addScaledVector(t2, Math.sin(a) * dist).normalize();
     } else randDir(rnd, d);
     const h = groundH(d);
     if (w.hasSea && h < 0.5) continue;
     if (Math.acos(clamp(d.dot(w.L), -1, 1)) * R < 22) continue;
     if (w.spots.some(s => s.dir.distanceTo(d) * R < 30)) continue;
-    const res = rollResource(rnd, body);
-    const depth = Math.round(5 + res.tier * 16 + rnd() * 10);
+    const res = w.spots.length < nearby ? spotRes(starters[w.spots.length]) : rollResource(rnd, body);
+    const depth = spotDepth(res, rnd);
     const sp = { idx: w.spots.length, res, depth, dir: d.clone(), seed: Math.floor(rnd() * 1e9), group: null, label: null, drill: null };
     sp.pos = sp.dir.clone().multiplyScalar(R + h);
     w.spots.push(sp);
@@ -124,7 +124,7 @@ function buildDrill(sp) {
 function drillState(sp) {
   const rec = (save.drills[world.body.id] || {})[sp.idx];
   if (!rec) return null;
-  const secsPerUnit = instantDrill() ? 0 : 3 + sp.depth / 6;
+  const secsPerUnit = instantDrill() ? 0 : (4 + sp.depth / 8) / (save.upgrades.fastdrill ? 2 : 1);
   const elapsed = (Date.now() - rec.start) / 1000;
   const units = secsPerUnit === 0 ? DRILL_CAP : Math.min(DRILL_CAP, Math.floor(elapsed / secsPerUnit));
   const next = units >= DRILL_CAP ? 0 : secsPerUnit - (elapsed % secsPerUnit);
@@ -170,28 +170,39 @@ function useDrill(act, pressed, dt) {
   }
 }
 function collectDrill(sp, st) {
-  const room = CARGO_MAX - cargoCount();
-  if (room <= 0) { toast('Cargo hold full! Unload at the lander.', 'bad'); return; }
-  const n = Math.min(room, st.units);
-  cargo[sp.res.id] = (cargo[sp.res.id] || 0) + n;
+  const n = invAdd(playerInv(), sp.res.id, st.units, invCap());
+  if (n <= 0) { toast('Inventory full! Unload at the lander.', 'bad'); return; }
   // keep any partial progress towards the next unit
   st.rec.start = Date.now() - (st.secsPerUnit ? ((Date.now() - st.rec.start) / 1000 % st.secsPerUnit) * 1000 : 0) - (st.units - n) * st.secsPerUnit * 1000;
   writeSave();
   floater(sp.pos, sp.dir, `+${n} ${sp.res.name}`, sp.res.color);
 }
+// at the lander, raw resources in your pockets go into the lander's hold automatically
 function unloadCargo() {
-  let gained = 0;
-  const parts = [];
-  for (const id in cargo) {
-    const r = resById(id), n = cargo[id];
-    save.res[id] = (save.res[id] || 0) + n;
-    gained += r.value * n;
-    parts.push(`${n} ${r.name}`);
+  const inv = playerInv(), parts = [];
+  for (const id of Object.keys(inv)) {
+    if (!ITEMS[id] || !ITEMS[id].raw) continue;
+    const n = invAdd(landerInv(), id, inv[id], LANDER_CAP);
+    if (n > 0) { invTake(inv, id, n); parts.push(`${n} ${itemName(id)}`); }
   }
-  cargo = {};
-  save.rp += gained;
+  if (!parts.length) return;
   writeSave();
-  toast(`Unloaded ${parts.join(', ')}: +${gained} RP`);
+  toast(`Unloaded into the lander: ${parts.join(', ')}`);
+}
+const rawCarried = () => Object.keys(playerInv()).some(id => ITEMS[id] && ITEMS[id].raw && invTotal(landerInv()) < LANDER_CAP);
+
+// dig a few units out of a deposit by hand (common ores only)
+let handT = 0, handSpot = null;
+function handMine(sp, held, dt) {
+  if (!held) { handT = 0; handSpot = null; return; }
+  if (sp.res.tier > 0) { if (handSpot !== sp) toast(`${sp.res.name} is ${sp.depth} m deep: it needs a drill.`, 'bad'); handSpot = sp; return; }
+  if (handSpot !== sp) { handSpot = sp; handT = 0; }
+  handT += dt;
+  if (handT >= HAND_MINE_TIME) {
+    handT = 0;
+    if (invAdd(playerInv(), sp.res.id, 1, invCap())) floater(sp.pos, sp.dir, `+1 ${sp.res.name}`, sp.res.color);
+    else toast('Inventory full!', 'bad');
+  }
 }
 
 // per-frame visuals: spinning bits, live labels
@@ -223,7 +234,8 @@ promptHooks.push(() => {
   if (!sp) return isDrill ? `Find a mining spot (labelled "deposit") · ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX} drills free` : '';
   const k = isDrill ? KEY.use : KEY.interact;
   const st = drillState(sp);
-  if (!st) return `${k} Place drill on ${sp.res.name} (${TIER_NAMES[sp.res.tier]}, ${sp.depth} m deep) · ${DRILLS_MAX - drillsPlaced()} free`;
+  if (!st) return isDrill ? `${KEY.use} Place drill on ${sp.res.name} (${TIER_NAMES[sp.res.tier]}, ${sp.depth} m deep) · ${DRILLS_MAX - drillsPlaced()} free`
+    : sp.res.tier > 0 ? `${sp.res.name} (${TIER_NAMES[sp.res.tier]}) is ${sp.depth} m deep: needs a drill [3]` : `Hold ${KEY.interact} to dig ${sp.res.name} by hand · or place a drill [3]`;
   const left = st.units >= DRILL_CAP ? 'full' : `next in ${Math.ceil(st.next)}s`;
   return st.units > 0 ? `${k} Collect ${st.units} ${sp.res.name} (${left}) · hold to pack up drill` : `Drilling ${sp.res.name}… ${left} · hold ${k} to pack up drill`;
 });
