@@ -52,6 +52,18 @@ function ridged3(x, y, z, s, oct = 4) {
   return t / norm;
 }
 
+// ridged noise with rounded crests (soft ridgelines instead of knife edges)
+function softRidge3(x, y, z, s, oct = 4) {
+  let t = 0, amp = 0.5, f = 1, norm = 0;
+  for (let i = 0; i < oct; i++) {
+    const n = vnoise3(x * f, y * f, z * f, s + i * 53) * 2 - 1;
+    const r = Math.max(0, 1 - Math.sqrt(n * n + 0.02));
+    t += amp * r * r;
+    norm += amp; f *= 2.05; amp *= 0.45;
+  }
+  return t / norm;
+}
+
 function hsl2rgb(h, s, l) {
   s /= 100; l = Math.max(0, Math.min(100, l)) / 100;
   const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);

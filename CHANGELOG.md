@@ -12,6 +12,12 @@
 - Smooth-shaded ground with bare rock on steep slopes; deeper depth buffer so far-away terrain doesn't flicker
 - Because the worlds changed size, collected samples and placed drills from older saves are reset (RP, unlocks, codex and resources are kept)
 
+### Part 2: natural landscapes
+- New planet terrain: continents with shallow shelves, flat lowlands and beaches along the coast, rolling hills inland, wide valleys, and mountain ranges (only well inland) with smooth slopes and rounded ridges; just a few sharp peaks
+- Mountains reach roughly 300–500 m; side ridges and gullies on their flanks
+- Colours blend naturally from beach to lowland to rock to peaks, with snow caps on Verdara and Glacia and bare rock on steep slopes
+- Sea coverage per planet: Verdara ~50%, Ruska ~30%, Glacia ~65%, Umbros ~45%, Xeno Prime ~55%
+
 ## v0.3 (prompt 3, the big update)
 ### Stage 1: round planets, gravity and atmosphere
 - Planets and moons are now spheres you can walk all the way around; gravity always pulls toward the centre

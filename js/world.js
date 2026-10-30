@@ -11,23 +11,55 @@ const FACES = [
 ].map(([n, u, v]) => ({ n: new THREE.Vector3(...n), u: new THREE.Vector3(...u), v: new THREE.Vector3(...v) }));
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const SUN_DIR = new THREE.Vector3(0.55, 0.62, 0.56).normalize();
-const PLANET_BIOMES = ['liquid', 'plains', 'rocky', 'crystal'];
 const MOON_BIOMES = ['dust', 'rock', 'ice'];
 const LANDER_R = 9;
 
 let world = null;
 
 // ---------- terrain shape ----------
+// Planets: continents with shallow shelves, flat coastal lowlands, rolling hills inland,
+// mountain ranges with rounded ridges further inland, a few sharp peaks and wide valleys.
+function planetHeight(body, x, y, z) {
+  const s = body.seed, R = body.R;
+  // gentle domain warp so coastlines and ranges don't look like plain noise
+  const wx = x + (vnoise3(x * 2.1, y * 2.1, z * 2.1, s + 1) - 0.5) * 0.35;
+  const wy = y + (vnoise3(x * 2.1, y * 2.1, z * 2.1, s + 2) - 0.5) * 0.35;
+  const wz = z + (vnoise3(x * 2.1, y * 2.1, z * 2.1, s + 3) - 0.5) * 0.35;
+  const c = (fbm3(wx * 1.1, wy * 1.1, wz * 1.1, s, 5) - 0.5) * 4 + body.seaBias;
+  const k = R / 700;
+  const ripple = (vnoise3(x * R / 25, y * R / 25, z * R / 25, s + 7) - 0.5) * 1.6;
+  if (c < 0) {
+    // sea floor: shallow shelf near the coast, deeper basins offshore
+    const hills = (fbm3(x * k, y * k, z * k, s + 5, 3) - 0.5) * 30;
+    return -smooth(0, 0.55, -c) * 180 - 3 + hills * smooth(0, 0.4, -c) + ripple;
+  }
+  const inland = smooth(0.02, 0.6, c);
+  // lowlands rise slowly from the coast; rolling hills grow further in
+  let h = 1 + c * body.land;
+  h += (fbm3(x * k, y * k, z * k, s + 5, 4) - 0.5) * 2 * 32 * smooth(0.04, 0.35, c);
+  // wide valleys
+  const vk = R / 3200, vn = Math.abs(fbm3(x * vk, y * vk, z * vk, s + 9, 2) - 0.5) * 2;
+  h -= (1 - smooth(0, 0.18, vn)) * 45 * inland;
+  // mountain ranges only well inland
+  const mk = 3.2, rangeMask = smooth(0.5, 0.72, fbm3(wx * mk, wy * mk, wz * mk, s + 21, 2)) * smooth(0.2, 0.6, c);
+  if (rangeMask > 0) {
+    const rk = R / 2200;
+    const ridge = softRidge3(wx * rk, wy * rk, wz * rk, s + 31, 4);
+    let m = ridge * ridge * body.mount;
+    // smaller side ridges and gullies on the mountain flanks
+    const sk = R / 520;
+    m += (softRidge3(x * sk, y * sk, z * sk, s + 41, 2) - 0.35) * body.mount * 0.14 * smooth(0.15, 0.5, ridge);
+    // only a few sharp peaks
+    const peak = smooth(0.8, 0.9, vnoise3(x * 9, y * 9, z * 9, s + 33));
+    if (peak > 0) m += peak * Math.pow(ridge, 5) * body.mount * 0.6;
+    h += rangeMask * m;
+  }
+  return h + ripple;
+}
+
 function rawHeight(body, d) {
   const x = d.x, y = d.y, z = d.z, s = body.seed, R = body.R;
-  if (body.type === 'planet') {
-    const c = (fbm3(x * 1.4, y * 1.4, z * 1.4, s, 5) - 0.5) * 4;
-    let h = c * body.land + body.seaBias;
-    const r = ridged3(x * 3.2 + 5, y * 3.2, z * 3.2, s + 11, 4);
-    h += r * r * body.mount * smooth(0.0, 0.7, c + body.seaBias / body.land);
-    h += (vnoise3(x * R / 7, y * R / 7, z * R / 7, s + 3) - 0.5) * 1.4;
-    return Math.max(h, -32);
-  }
+  if (body.type === 'planet') return planetHeight(body, x, y, z);
   const c = (fbm3(x * 1.8, y * 1.8, z * 1.8, s, 4) - 0.5) * 4;
   const r = ridged3(x * 3.5, y * 3.5, z * 3.5, s + 11, 4);
   let h = c * body.land + r * r * body.mount;
@@ -74,19 +106,22 @@ function biomeOf(body, h, d) {
 }
 // slope = how flat the ground is (1 = level, 0 = vertical cliff)
 function colorOf(body, b, h, d, slope = 1) {
-  const names = body.type === 'planet' ? PLANET_BIOMES : MOON_BIOMES;
-  let [hh, s, l] = body.col[names[b]];
-  const R = body.R;
-  let L = l + (vnoise3(d.x * R / 9, d.y * R / 9, d.z * R / 9, body.seed + 99) - 0.5) * 12;
-  if (body.type === 'planet') {
-    if (b === 0) L -= Math.min(22, -h * 0.8);
-    if (b === 3) L += Math.min(15, (h - body.hCrystal) * 0.3);
-    if (b === 1 && slope < 0.85) { // bare rock on steep slopes
-      const t = smooth(0.85, 0.7, slope), [rh, rs, rl] = body.col.rocky;
-      hh = lerp(hh, rh, t); s = lerp(s, rs, t); L = lerp(L, rl, t);
-    }
+  const R = body.R, C = body.col;
+  const tint = (vnoise3(d.x * R / 60, d.y * R / 60, d.z * R / 60, body.seed + 99) - 0.5) * 10
+             + (vnoise3(d.x * R / 9, d.y * R / 9, d.z * R / 9, body.seed + 98) - 0.5) * 5;
+  if (body.type !== 'planet') { const [hh, s, l] = C[MOON_BIOMES[b]]; return hsl2rgb(hh, s, l + tint); }
+  let col;
+  const mix = (a, c2, t) => [lerp(a[0], c2[0], t), lerp(a[1], c2[1], t), lerp(a[2], c2[2], t)];
+  if (h < 0) col = [C.liquid[0], C.liquid[1], C.liquid[2] + 6 - Math.min(24, -h * 0.25)];
+  else {
+    // beach -> lowland -> rock -> peaks (-> snow), blended so there are no hard bands
+    col = mix(C.beach || C.plains, C.plains, smooth(1.5, 5, h));
+    col = mix(col, C.rocky, smooth(body.hRocky * 0.8, body.hRocky * 1.2, h));
+    col = mix(col, C.crystal, smooth(body.hCrystal * 0.9, body.hCrystal * 1.1, h));
+    if (C.snow) col = mix(col, C.snow, smooth(body.mount * 0.7, body.mount * 0.8, h) * smooth(0.6, 0.8, slope));
+    col = mix(col, C.rocky, smooth(0.86, 0.68, slope) * smooth(1, 4, h)); // bare rock on steep slopes
   }
-  return hsl2rgb(hh, s, L);
+  return hsl2rgb(col[0], col[1], col[2] + tint);
 }
 
 // pick a fairly flat dry spot for the lander
@@ -97,7 +132,7 @@ function findSite(body, rnd) {
     randDir(rnd, d);
     if (i < 250 && d.dot(SUN_DIR) < 0.35) continue; // land in daylight
     const h = rawHeight(body, d);
-    if (body.type === 'planet' && (h < 3 || h > 16)) continue;
+    if (body.type === 'planet' && (h < 3 || h > 40)) continue;
     tangentOf(d, t1); t2.copy(d).cross(t1);
     let slope = 0;
     for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {

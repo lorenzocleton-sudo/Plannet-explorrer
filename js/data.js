@@ -16,31 +16,31 @@ const PLANET_CATS = ['plant', 'rock', 'mineral', 'fossil'];
 // "breathable" is hidden from the player until they land there.
 const PLANETS = [
   { name: 'Verdara', seed: 1101, cost: 0, R: 6000, g: 9.8, breathable: true, o2: 1.0, speed: 1.0, grip: 10,
-    sky: '#8fc7ff', seaBias: 5, land: 26, mount: 75, desc: 'Mild, lush starter world.',
-    col: { liquid: [200, 55, 34], plains: [105, 38, 36], rocky: [32, 18, 38], crystal: [265, 30, 52] },
+    sky: '#8fc7ff', seaBias: 0.25, land: 45, mount: 520, desc: 'Mild, lush starter world.',
+    col: { liquid: [200, 55, 34], plains: [105, 38, 36], rocky: [32, 18, 38], crystal: [265, 30, 52], beach: [45, 40, 62], snow: [210, 25, 93] },
     moons: [{ name: 'Pell', R: 1700, g: 1.6, ice: false }] },
   { name: 'Ruska', seed: 2207, cost: 40, R: 5200, g: 11.5, breathable: false, o2: 1.4, speed: 0.95, grip: 10,
-    sky: '#e2a27c', seaBias: 2, land: 24, mount: 85, desc: 'Rust-red dunes and towering iron cliffs.',
-    col: { liquid: [12, 70, 28], plains: [20, 45, 40], rocky: [10, 28, 30], crystal: [40, 65, 52] },
+    sky: '#e2a27c', seaBias: 0.3, land: 45, mount: 650, desc: 'Rust-red dunes and towering iron cliffs.',
+    col: { liquid: [12, 70, 28], plains: [20, 45, 40], rocky: [10, 28, 30], crystal: [40, 65, 52], beach: [28, 45, 52] },
     moons: [{ name: 'Kor', R: 1200, g: 1.2, ice: false }, { name: 'Vesk', R: 2000, g: 2.1, ice: true }] },
   { name: 'Glacia', seed: 3301, cost: 100, R: 5600, g: 7.5, breathable: true, o2: 1.7, speed: 1.1, grip: 2.2,
-    sky: '#cfe6ff', seaBias: -7, land: 24, mount: 60, desc: 'Frozen ocean world. The ice is slippery!',
-    col: { liquid: [198, 60, 38], plains: [200, 28, 80], rocky: [212, 14, 55], crystal: [180, 60, 70] },
+    sky: '#cfe6ff', seaBias: -0.1, land: 40, mount: 420, desc: 'Frozen ocean world. The ice is slippery!',
+    col: { liquid: [198, 60, 38], plains: [200, 28, 80], rocky: [212, 14, 55], crystal: [180, 60, 70], beach: [200, 20, 86], snow: [200, 30, 96] },
     moons: [] },
   { name: 'Umbros', seed: 4409, cost: 200, R: 7000, g: 9.0, breathable: false, o2: 2.0, speed: 1.0, grip: 10, dark: true,
-    sky: '#04030a', seaBias: 6, land: 26, mount: 95, desc: 'Eternal night. Your lamp only reaches so far.',
-    col: { liquid: [280, 50, 20], plains: [268, 25, 30], rocky: [250, 12, 24], crystal: [300, 70, 52] },
+    sky: '#04030a', seaBias: 0.25, land: 45, mount: 700, desc: 'Eternal night. Your lamp only reaches so far.',
+    col: { liquid: [280, 50, 20], plains: [268, 25, 30], rocky: [250, 12, 24], crystal: [300, 70, 52], beach: [270, 15, 36] },
     moons: [{ name: 'Nyx', R: 1100, g: 0.9, ice: true }, { name: 'Erebus', R: 1600, g: 1.8, ice: false },
             { name: 'Mora', R: 1400, g: 1.4, ice: true }, { name: 'Thane', R: 2300, g: 2.6, ice: false }] },
   { name: 'Xeno Prime', seed: 5503, cost: 350, R: 8000, g: 13, breathable: false, o2: 2.4, speed: 0.9, grip: 8,
-    sky: '#b9c66e', seaBias: 0, land: 28, mount: 105, desc: 'Heavy, toxic jungle world. Rich in ancient life.',
-    col: { liquid: [80, 80, 32], plains: [62, 40, 34], rocky: [40, 20, 30], crystal: [150, 70, 52] },
+    sky: '#b9c66e', seaBias: 0.05, land: 50, mount: 800, desc: 'Heavy, toxic jungle world. Rich in ancient life.',
+    col: { liquid: [80, 80, 32], plains: [62, 40, 34], rocky: [40, 20, 30], crystal: [150, 70, 52], beach: [55, 35, 45] },
     moons: [{ name: 'Ixa', R: 2100, g: 2.2, ice: true }, { name: 'Quell', R: 1300, g: 1.3, ice: false }, { name: 'Zor', R: 1500, g: 1.7, ice: false }] },
 ];
 
 const BODIES = [];
 PLANETS.forEach((P, i) => {
-  Object.assign(P, { id: 'p' + i, type: 'planet', idx: i, speciesKey: String(i), hRocky: 14, hCrystal: 38 });
+  Object.assign(P, { id: 'p' + i, type: 'planet', idx: i, speciesKey: String(i), hRocky: P.mount * 0.3, hCrystal: P.mount * 0.62 });
   BODIES.push(P);
   P.moons.forEach((M, k) => {
     const seed = P.seed * 31 + k * 977 + 3, rnd = mulberry32(seed);
