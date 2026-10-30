@@ -414,7 +414,6 @@ function update(dt) {
     player.o2 = Math.min(O2M, player.o2 + 50 * dt);
     player.hp = Math.min(100, player.hp + 20 * dt);
     if (bag.length) deposit();
-    if (rawCarried()) unloadCargo();
   } else if (debugOn() || (B.breathable && !player.inLiquid)) {
     player.o2 = debugOn() ? O2M : Math.min(O2M, player.o2 + 10 * dt); // infinite O2 in debug mode
   } else if (gen && player.o2 < O2M) {

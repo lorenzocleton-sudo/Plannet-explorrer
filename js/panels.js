@@ -1,6 +1,6 @@
 'use strict';
 // ---------- machine + lander panels (opened with Interact) ----------
-let panelTarget = null, panelAcc = 0;
+let panelTarget = null, panelAcc = 0, panelHtml = '';
 function openPanel(target) {
   panelTarget = target;
   showMenu('machine');
@@ -17,6 +17,19 @@ function pxStore(id, n) {
   let moved = 0;
   for (const k of ids) { const m = invAdd(st.inv, k, Math.min(n, inv[k] || 0), st.cap); invTake(inv, k, m); moved += m; }
   if (!moved) toast(`${st.name} is full.`, 'bad');
+  writeSave(); renderPanel();
+}
+// put every raw resource you carry (ores, ice, crystals) into the store
+function pxStoreRaw() {
+  const st = panelStore(), inv = playerInv();
+  let moved = 0, left = 0;
+  for (const k of Object.keys(inv)) {
+    if (!ITEMS[k] || !ITEMS[k].raw) continue;
+    const m = invAdd(st.inv, k, inv[k], st.cap); invTake(inv, k, m); moved += m; left += inv[k] || 0;
+  }
+  if (moved) toast(`Deposited ${moved} resources.`);
+  if (left) toast(`${st.name} is full.`, 'bad');
+  else if (!moved) toast('You carry no ores to deposit.');
   writeSave(); renderPanel();
 }
 function pxTake(id, n) {
@@ -124,11 +137,12 @@ function renderPanel() {
   const st = panelStore();
   if (st) {
     h += `<div class="xfer"><div><h4>Your inventory (${invTotal(inv)}/${invCap()})</h4>${itemRows(inv, id => `<button class="ghost sm2" onclick="pxStore('${id}', 999)">Store</button>`)}
-        <button class="ghost sm2" onclick="pxStore(null, 9999)">Store everything</button></div>
+        <button class="sm2" onclick="pxStoreRaw()">Deposit all ores</button> <button class="ghost sm2" onclick="pxStore(null, 9999)">Store everything</button></div>
       <div><h4>${st.name} (${invTotal(st.inv)}/${st.cap})</h4>${itemRows(st.inv, id => `<button class="ghost sm2" onclick="pxTake('${id}', 10)">Take 10</button><button class="ghost sm2" onclick="pxTake('${id}', 999)">All</button>`)}</div></div>`;
   }
   h += `<div class="row">${t !== 'lander' ? '<button class="danger" onclick="pxRemove()">Deconstruct</button>' : ''}<button class="ghost" onclick="goBack()">Close</button></div>`;
-  $('machineBody').innerHTML = h;
+  // only touch the DOM when something changed, so a tap is never lost to a redraw
+  if (h !== panelHtml) { $('machineBody').innerHTML = h; panelHtml = h; }
 }
 function panelTick(dt) {
   if (menu !== 'machine') return;

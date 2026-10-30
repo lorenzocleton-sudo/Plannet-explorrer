@@ -111,22 +111,6 @@ function nearestSpot(maxD = DRILL_REACH) {
 }
 
 // at the lander, raw resources in your pockets go into the lander's hold automatically
-// only ore you dug up by hand is unloaded automatically; items you took out of the lander stay with you
-const minedLoad = () => save.mined || (save.mined = {});
-function unloadCargo() {
-  const inv = playerInv(), mined = minedLoad(), parts = [];
-  for (const id of Object.keys(mined)) {
-    const n = invAdd(landerInv(), id, Math.min(mined[id], inv[id] || 0), LANDER_CAP);
-    if (n > 0) { invTake(inv, id, n); parts.push(`${n} ${itemName(id)}`); }
-    mined[id] -= n;
-    if (n === 0 || mined[id] <= 0) delete mined[id]; // used up, built with, or the lander is full
-  }
-  if (!parts.length) return;
-  writeSave();
-  toast(`Unloaded into the lander: ${parts.join(', ')}`);
-}
-const rawCarried = () => Object.keys(minedLoad()).some(id => (playerInv()[id] || 0) > 0) && invTotal(landerInv()) < LANDER_CAP;
-
 // dig a few units out of a deposit by hand (common ores only)
 let handT = 0, handSpot = null;
 function handMine(sp, held, dt) {
@@ -137,8 +121,6 @@ function handMine(sp, held, dt) {
   if (handT >= HAND_MINE_TIME) {
     handT = 0;
     if (!invAdd(playerInv(), sp.res.id, 1, invCap())) { toast('Inventory full!', 'bad'); return; }
-    const mined = minedLoad();
-    mined[sp.res.id] = (mined[sp.res.id] || 0) + 1;
     floater(sp.pos, sp.dir, `+1 ${sp.res.name}`, sp.res.color);
   }
 }

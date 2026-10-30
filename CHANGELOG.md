@@ -1,8 +1,9 @@
 # Changelog
 
 ## v0.5 (prompt 5: survival factory)
-### Fix: items taken out of the lander were put straight back
-- Standing at the lander unloaded every raw resource you carried, including ore you had just taken out of the hold. Now only ore you dug up by hand is unloaded automatically; anything you take out stays in your inventory
+### Change: ores are deposited by hand
+- Standing at the lander no longer unloads your resources automatically (it also put back ore you had just taken out). Open the lander or a crate with INTERACT and tap **Deposit all ores** (or Store / Store everything)
+- Machine and lander panels only redraw when something changes, so taps on their buttons are no longer lost to a redraw
 
 ### Fix: error after placing a Smelter
 - Placing a powered machine (Smelter, Oxygen Generator, Fuel Refinery, Fabricator) closer to a Solar Panel or Battery than to the lander crashed the power network setup ("Cannot read properties of null (reading 'users')"), and the saved base kept crashing after reload. Machines now join the nearest power source's network correctly
