@@ -1,8 +1,8 @@
 # Planet Explorer
 
-A 3D third-person space exploration game where you play as a planetary researcher. Land on huge round planets and moons, collect plants, rocks, minerals, dust and ice, scan the ground for buried traces of **ancient life**, and drill for resources. Everything is a simple 3D form with its name floating above it.
+A 3D third-person survival factory game on huge round planets and moons. Survive the oxygen, heat and cold, mine ores and ice, build drills, smelters, solar power and fabricators, research upgrades, and refine rocket fuel to fly to the next world. Along the way you collect plants, rocks, minerals and buried traces of **ancient life** to earn research. Everything is a simple 3D form with its name floating above it.
 
-**Current version: v0.4**
+**Current version: v0.5**
 
 ## Play online
 The game is deployed automatically to GitHub Pages on every push to `main`:
@@ -17,32 +17,30 @@ Or open `index.html` in a browser. There's no install or build step, and it work
 | `WASD` / Arrows | Move (relative to the camera) |
 | Mouse | Look around (click the game to capture the mouse) |
 | `Space` | Jump |
-| `1`–`3` / mouse wheel | Switch tool: Scanner, Collector, Drill |
-| `E` / left click | Use the tool (hold to dig up fossils or pack up a drill) |
-| `F` | Interact: star map at the lander, drills at mining spots, or pick up the nearest sample |
+| `1`–`3` / mouse wheel | Switch tool: Scanner, Collector, Build |
+| `E` / left click | Use the tool (scan, pick up / dig up samples, open the build menu) |
+| `F` | Interact: lander panel, machine panels, dig a deposit by hand, pick up a sample |
+| `B` | Build menu |
+| `R` / mouse wheel | Rotate while placing |
+| `X` | Switch to deconstruct mode while building |
 | `Q` | Quick scanner pulse |
 | `C` | Research codex |
-| `M` | Star map (only while standing at the lander) |
-| `Esc` / `P` | Pause menu (resume, codex, star map, options, quit) |
+| `Esc` / `P` | Pause menu (resume, codex, tech tree, star map, options) or stop building |
 | Any key / click | Skip a travel cutscene |
 
-**Touch (phones and tablets):** the joystick in the bottom-left corner moves you; drag anywhere on the right side to look around. The big buttons bottom-right are **Jump**, **Use** (the current tool) and **Interact**. Tap the small hotbar at the bottom to switch tools, and the pause button under the minimap for the menu (codex, star map, options).
+**Touch (phones and tablets):** the joystick bottom-left moves you; drag the right side to look. Big buttons bottom-right: **Jump**, **Use** (current tool) and **Interact**. Tap the hotbar at the bottom to switch tools (🔨 opens the build menu). While building, the buttons become **Rotate**, **Place** (hold to remove in deconstruct mode) and **✕**.
 
-### Gameplay
-1. Planets (5–8 km radius) and moons (1–2.3 km) are round: you can walk all the way around them. Detailed terrain streams in around you as you go.
-2. Each world has its own gravity (Earth-like 9.81 m/s² on Verdara, 1.45–1.9 m/s² on the moons), which changes how high you jump and how hard you fall.
-3. You only find out if the air is breathable once you land. On airless worlds watch your **oxygen**; running out drains your **health**.
-4. Every world turns: the sun rises and sets, and nights are dark, so your helmet light switches on at dusk. The HUD shows the local time.
-5. Falls hurt based on height × gravity, so the same drop is much safer on a moon. Landing in water is safe.
-6. Collect samples and bring them to the **lander** to analyze them for **Research Points (RP)**. New species are worth 3×.
-7. Use the Scanner to find buried fossils, then hold Use (Collector) or Interact on them to dig them out.
-8. Place your 3 drills on labelled mining spots. They keep mining while you explore; collect the resources and unload them at the lander. Rarer resources are deeper and found on harder worlds.
-9. The lander's marker only shows when you're within 50 m, so remember where you parked!
-10. Use the interactive **star map** at the lander to unlock planets with RP, zoom into a planet to see its moons, and pick your next destination.
+### How to play
+1. **Survive.** Your suit's oxygen drains unless the air is breathable; refill at the lander or near an Oxygen Generator. Some worlds are scorching by day or freezing at night: extreme heat and cold hurt unless you have the Heat or Cold Suit. Falls hurt based on height × gravity.
+2. **Mine.** Mining spots give Iron Ore, Copper Ore, Silicon and Ice (planets lean metal, moons lean ice and silicon), with rare crystals on harder worlds. Dig common ores by hand (hold Interact) or build a Drill on the spot.
+3. **Build.** Open the build menu, place machines with the see-through preview, rotate them, and deconstruct to get everything back. You start with a kit of plates, wire and wafers in the lander.
+4. **Automate.** Machines within 15 m of a Solar Panel or Battery are powered (solar only works by day; batteries cover the night). Machines within 12 m of a Storage Crate take their inputs from it and put their outputs into it. The lander gives a little power and acts as storage within 20 m.
+   - Drill → crate → **Smelter** (Iron Plates, Copper Wire, Silicon Wafers) → **Fabricator** (Gears, Circuits, tools, upgrades)
+   - **Oxygen Generator**: Ice + power → oxygen · **Fuel Refinery**: Ice + power → Rocket Fuel
+5. **Research.** Collect samples and analyze them at the lander for Research Points, then unlock machines and upgrades in the **tech tree** (bigger oxygen tank, heat/cold suits, faster drills, better helmet light, bigger backpack, long-range scanner). Upgrades are crafted at a Fabricator.
+6. **Travel.** Flying to another planet or moon burns Rocket Fuel from the lander's hold, so set up a refinery before you leave. Each world keeps its own base, and machines catch up on the time you were away.
 
-If you die, you respawn at the lander and lose the samples and resources you were carrying.
-
-The **Options** menu has mouse/camera/label/graphics settings and an **Admin** section with a debug mode (fly with `V`, infinite oxygen, god mode, instant drilling, teleport with `T`, unlock everything). Admin buttons only appear while debug mode is on.
+The **Options** menu has mouse/camera/label/graphics settings and an **Admin** section with a debug mode (fly with `V`, infinite oxygen, god mode, fast machines, free travel, teleport with `T`, unlock all planets). Admin buttons only appear while debug mode is on.
 
 Progress is saved automatically in your browser.
 
