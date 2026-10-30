@@ -22,6 +22,12 @@
 - Touch: tap the hotbar slots; the big action button changes to match the tool (SCAN / GRAB / DRILL / RAISE)
 - Samples can only be picked up with the Collector (the prompt tells you to switch)
 
+### Stage 4: mining with drills
+- 14 mining spots per planet and 7 per moon, each marked with a name label ("Iron deposit · 12 m deep") and shown on the radar
+- 10 resources in 5 rarity tiers, from Iron/Copper/Silicon up to Iridium and Xenocrystal; rarer ones are deeper (slower to drill) and only appear on harder worlds
+- You own 3 drills: place one on a spot with the Drill tool, it mines over time (even while you're away), then collect the resources; hold to pack the drill back up
+- Resources go in a cargo hold (40 units), are unloaded at the lander for Research Points, and are listed in the codex; dying loses carried cargo
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

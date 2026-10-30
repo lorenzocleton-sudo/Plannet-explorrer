@@ -47,7 +47,7 @@ $('pQuit').onclick = () => { writeSave(); showMenu('title'); };
 for (const k of ['codex', 'map']) menus[k].addEventListener('click', e => { if (e.target === menus[k]) goBack(); });
 
 function renderPause() {
-  $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX}`;
+  $('pauseInfo').textContent = `${world.body.name} · ${save.rp} RP · Backpack ${bag.length}/${BAG_MAX} · Cargo ${cargoCount()}/${CARGO_MAX}`;
   const pm = $('pMap');
   pm.disabled = !atLander();
   pm.textContent = atLander() ? 'Star Map' : 'Star Map (go to lander)';
@@ -128,6 +128,10 @@ function codexSection(body) {
 }
 function renderCodex() {
   let h = `<h2>Research Codex</h2><p class="sub">Research Points: <b>${save.rp}</b> &nbsp;·&nbsp; Backpack: ${bag.length}/${BAG_MAX} (deposit at lander to analyze)</p>`;
+  const owned = RESOURCES.filter(r => save.res[r.id] || cargo[r.id]);
+  h += `<h3>Mined resources</h3>`;
+  h += owned.length ? `<div class="grid">${owned.map(r => `<div class="card"><span style="width:20px;height:20px;border-radius:4px;background:${r.color};flex:none"></span><div><b>${r.name}</b>${save.res[r.id] || 0} stored${cargo[r.id] ? ` · ${cargo[r.id]} carried` : ''} · <span class="muted">${TIER_NAMES[r.tier]}</span></div></div>`).join('')}</div>`
+    : '<p class="muted">Nothing mined yet. Place drills on mining spots with the Drill tool.</p>';
   const cur = bodyById(save.current);
   h += codexSection(cur);
   for (const b of BODIES) if (b !== cur && save.atmo[b.id]) h += codexSection(b);
@@ -258,7 +262,10 @@ function radarPoint(p, cx, cy, rad) {
 }
 
 // stage hooks: tools can override the bottom prompt
-function toolPrompt() { return ''; }
+function toolPrompt() {
+  for (const h of promptHooks) { const t = h(); if (t) return t; }
+  return '';
+}
 
 let fps = 60;
 function drawHUD(dt) {
@@ -286,7 +293,7 @@ function drawHUD(dt) {
   bar(20, 100, 200, 16, bag.length / BAG_MAX, bag.length >= BAG_MAX ? '#e0703a' : '#6bbf59', `Backpack ${bag.length}/${BAG_MAX}`);
   bar(20, 122, 200, 16, 1 - scanT / SCAN_CD, scanT > 0 ? '#555d88' : '#b48cff', scanT > 0 ? `Scanner ${scanT.toFixed(1)}s` : 'Scanner ready [Q]');
   hx.fillStyle = '#7a86b8'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'top';
-  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m`, 20, 146);
+  hx.fillText(`Altitude ${(player.pos.length() - world.R).toFixed(0)} m · Cargo ${cargoCount()}/${CARGO_MAX} · Drills ${DRILLS_MAX - drillsPlaced()}/${DRILLS_MAX}`, 20, 146);
 
   const sig = fossilSignal();
   if (sig < 50) {
@@ -311,6 +318,12 @@ function drawHUD(dt) {
       if (it.taken || !((it.cat === 'fossil' && it.revealed) || it.ping > 0)) continue;
       const p = radarPoint(it.pos, cx, cy, rad);
       if (p) { hx.fillStyle = it.cat === 'fossil' ? '#ffd166' : 'rgba(255,255,255,.85)'; hx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); }
+    }
+    for (const sp of world.spots) {
+      const p = radarPoint(sp.pos, cx, cy, rad);
+      if (!p) continue;
+      hx.fillStyle = sp.res.color; hx.strokeStyle = sp.drill ? '#ffc23a' : '#000';
+      hx.beginPath(); hx.moveTo(p[0], p[1] - 5); hx.lineTo(p[0] + 4, p[1]); hx.lineTo(p[0], p[1] + 5); hx.lineTo(p[0] - 4, p[1]); hx.closePath(); hx.fill(); hx.stroke();
     }
     const lp = radarPoint(world.landerPos, cx, cy, rad);
     if (lp) { hx.fillStyle = '#ff5d5d'; hx.fillRect(lp[0] - 3.5, lp[1] - 3.5, 7, 7); }
@@ -344,6 +357,13 @@ function drawHUD(dt) {
     const w = hx.measureText(prompt).width + 28;
     hx.fillStyle = 'rgba(10,13,30,.82)'; rr(VW / 2 - w / 2, VH - 124, w, 34, 10); hx.fill();
     hx.fillStyle = '#fff'; hx.fillText(prompt, VW / 2, VH - 107);
+  }
+  if (drillHold > 0.15 && drillHoldSpot) {
+    const p = toScreen(_v.copy(drillHoldSpot.pos).addScaledVector(drillHoldSpot.dir, 2));
+    if (p) {
+      hx.fillStyle = 'rgba(0,0,0,.6)'; rr(p[0] - 30, p[1], 60, 9, 4); hx.fill();
+      hx.fillStyle = '#ffc23a'; rr(p[0] - 30, p[1], 60 * Math.min(1, drillHold / PICKUP_TIME), 9, 4); hx.fill();
+    }
   }
   if (digTarget) {
     const p = toScreen(_v.copy(digTarget.pos).addScaledVector(digTarget.dir, 1.2));

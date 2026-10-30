@@ -126,8 +126,9 @@ function deposit() {
 // health hit 0: respawn at the lander and lose everything carried but not yet deposited
 function die(cause) {
   for (const it of bag) { it.taken = false; it.mesh.visible = true; }
-  const lost = bag.length;
+  const lost = bag.length + cargoCount();
   bag = [];
+  cargo = {};
   resetPlayer();
   respawned = true;
   lowWarned = false;
@@ -191,9 +192,8 @@ function selectTool(i) {
   digT = 0; digTarget = null;
   renderHotbar();
 }
-// filled in by later stages
-function useDrill(act, pressed, dt) {}
-function useTerraform(raise, lower, dt) {}
+// tools defined in mining.js / terraform.js; extra bottom-bar prompts can be registered here
+const promptHooks = [];
 
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
@@ -334,6 +334,7 @@ function update(dt) {
     player.hp = Math.min(100, player.hp + 20 * dt);
     if (player.o2 > 30) lowWarned = false;
     if (bag.length) deposit();
+    if (cargoCount()) unloadCargo();
   } else if (B.breathable && !player.inLiquid) {
     player.o2 = Math.min(100, player.o2 + 10 * dt);
   } else {
@@ -453,5 +454,6 @@ function syncScene() {
     const dist = it.pos.distanceTo(player.pos);
     it.label.visible = dist < maxD || (it.ping > 0 && dist < SCAN_R + 5);
   }
+  syncMining();
 }
 const _NIGHT = new THREE.Color('#05060f');
