@@ -182,10 +182,10 @@ renderHotbar();
 
 // ---------- touch buttons ----------
 const tAct = $('tAct');
-tAct.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
+tAct.addEventListener('pointerdown', e => { touchAct = tapAct = true; e.preventDefault(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tAct.addEventListener(ev, () => { touchAct = false; }));
 const tInt = $('tInteract');
-tInt.addEventListener('pointerdown', e => { touchInteract = true; e.preventDefault(); });
+tInt.addEventListener('pointerdown', e => { touchInteract = tapInteract = true; e.preventDefault(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => tInt.addEventListener(ev, () => { touchInteract = false; }));
 $('tJump').addEventListener('pointerdown', e => { jumpQueued = true; e.preventDefault(); });
 $('tPause').addEventListener('click', () => { if (!menu) showMenu('pause'); });

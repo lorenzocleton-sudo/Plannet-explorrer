@@ -99,6 +99,7 @@ function stopBuild() {
   if (build.ring) world.scene.remove(build.ring);
   Object.assign(build, { active: false, ghost: null, ring: null, target: null, check: null });
   document.body.classList.remove('building');
+  touchAct = tapAct = false;
 }
 const rotateBuild = () => { build.rot = (build.rot + Math.PI / 4) % (Math.PI * 2); };
 
@@ -195,7 +196,7 @@ function syncBuildBar() {
 $('bRotate').addEventListener('pointerdown', e => { e.preventDefault(); rotateBuild(); });
 $('bCancel').addEventListener('click', () => stopBuild());
 const bPlace = $('bPlace');
-bPlace.addEventListener('pointerdown', e => { touchAct = true; e.preventDefault(); });
+bPlace.addEventListener('pointerdown', e => { touchAct = tapAct = true; e.preventDefault(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => bPlace.addEventListener(ev, () => { touchAct = false; }));
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();

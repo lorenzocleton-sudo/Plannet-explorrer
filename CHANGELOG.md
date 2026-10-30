@@ -1,6 +1,12 @@
 # Changelog
 
 ## v0.5 (prompt 5: survival factory)
+### Fix: game could freeze after building machines (reported on a tablet)
+- Machine labels with live numbers ("Battery · 45%", "Smelter · Iron Plate 63%") created a new texture for every new number and never freed them (hundreds within minutes), which can exhaust a tablet's graphics memory and freeze the 3D view while menus still work. Each machine now redraws one label in place
+- Quick taps on PLACE / USE / INTERACT could be missed if the finger lifted before the next frame; taps are now always registered, and a held button can no longer get "stuck" when build mode ends
+- The game loop keeps running even if a frame hits an error (it shows the message instead of freezing), and a lost graphics context shows a message and tries to recover
+- The build-mode ✕ button is now labelled DONE
+
 ### Stage 1: survival
 - Suit oxygen tank (100, or 200 with the Bigger Oxygen Tank upgrade) drains over time unless the air is breathable; refill at the lander or (later) near an Oxygen Generator
 - Every world has a climate that follows the day/night cycle: Ruska and Xeno Prime are scorching by day, Glacia and Umbros are always freezing, airless moons freeze at night

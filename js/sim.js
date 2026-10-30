@@ -228,7 +228,7 @@ function syncFactory(dt) {
     b.label.visible = opts.labels !== 'off' && dist < maxD;
     if (relabel && b.label.visible) {
       const t = `${b.def.name} · ${machineStatus(b)}`;
-      if (t !== b.labelText) { b.labelText = t; setLabelText(b.label, t, b.def.power && (!b.grid || b.grid.ratio < 0.5) && machineWants(b) ? '#ff9d9d' : '#ffd98a', 0.55, false); }
+      if (t !== b.labelText) { b.labelText = t; setDynLabel(b.label, t, b.def.power && (!b.grid || b.grid.ratio < 0.5) && machineWants(b) ? '#ff9d9d' : '#ffd98a'); }
     }
   }
 }

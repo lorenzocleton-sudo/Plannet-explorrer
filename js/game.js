@@ -241,7 +241,7 @@ function moveKnob() {
 }
 function releaseJoy() { joy.id = null; joy.active = false; $('joyKnob').style.transform = ''; }
 const look = { id: null, x: 0, y: 0 };
-let touchAct = false, touchInteract = false, mouseUse = false, actPrev = false, interPrev = false, jumpQueued = false;
+let touchAct = false, touchInteract = false, tapAct = false, tapInteract = false, mouseUse = false, actPrev = false, interPrev = false, jumpQueued = false;
 
 // ---------- tool hotbar ----------
 const TOOLS = [
@@ -438,11 +438,12 @@ function update(dt) {
   // tools
   scanT = Math.max(0, scanT - dt);
   pickCd -= dt; fullWarnT -= dt;
-  const act = keys.has('e') || mouseUse || touchAct;
+  const act = keys.has('e') || mouseUse || touchAct || tapAct;
   const pressed = act && !actPrev;
   actPrev = act;
   // Interact (F / INTERACT): the lander, a machine, a deposit or the nearest sample - whatever is closest at hand
-  const inter = keys.has('f') || touchInteract;
+  const inter = keys.has('f') || touchInteract || tapInteract;
+  tapAct = tapInteract = false;
   const iPressed = inter && !interPrev;
   interPrev = inter;
   if (build.active) updateBuild(dt, act, pressed);

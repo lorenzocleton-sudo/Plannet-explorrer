@@ -87,7 +87,8 @@ function spawnBuilding(w, rec) {
   const r = w.R + groundH(dir), def = MACHINES[rec.t];
   const b = { rec, type: rec.t, def, dir, pos: dir.clone().multiplyScalar(r), mesh: machineModel(rec.t), stores: [], grid: null };
   placeOnSurface(b.mesh, dir, r, rec.r);
-  b.label = makeLabel(def.name, '#ffd98a', 0.55, false);
+  b.label = makeDynLabel(0.55);
+  setDynLabel(b.label, def.name, '#ffd98a');
   b.label.position.copy(dir).multiplyScalar(r + LABEL_H[rec.t]);
   w.scene.add(b.mesh, b.label);
   w.buildings.push(b);
@@ -99,6 +100,7 @@ function spawnBuilding(w, rec) {
 }
 function removeBuilding(w, b) {
   w.scene.remove(b.mesh, b.label);
+  disposeDynLabel(b.label);
   w.buildings = w.buildings.filter(x => x !== b);
   const base = baseData(w.body.id);
   base.list = base.list.filter(r => r !== b.rec);

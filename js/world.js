@@ -246,6 +246,36 @@ function setLabelText(s, text, color, height, big) {
   s.scale.set(height * L.aspect, height, 1);
 }
 
+// A label whose text changes a lot (machine status) gets its own canvas that is redrawn in place,
+// so it doesn't create a new texture for every new number.
+const DYN_W = 768, DYN_H = 56;
+function makeDynLabel(height) {
+  const c = document.createElement('canvas');
+  c.width = DYN_W; c.height = DYN_H;
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, fog: false }));
+  s.scale.set(height * DYN_W / DYN_H, height, 1);
+  s.renderOrder = 5;
+  s.userData.dyn = { c, tex };
+  return s;
+}
+function setDynLabel(s, text, color) {
+  const { c, tex } = s.userData.dyn, x = c.getContext('2d');
+  let fs = 36;
+  x.font = `bold ${fs}px system-ui,sans-serif`;
+  let w = x.measureText(text).width + 28;
+  if (w > DYN_W) { fs = Math.floor(fs * DYN_W / w); x.font = `bold ${fs}px system-ui,sans-serif`; w = DYN_W; }
+  x.clearRect(0, 0, DYN_W, DYN_H);
+  const l = (DYN_W - w) / 2, h = DYN_H;
+  x.fillStyle = 'rgba(8,10,24,.68)';
+  x.beginPath(); x.moveTo(l + 12, 0); x.arcTo(l + w, 0, l + w, h, 12); x.arcTo(l + w, h, l, h, 12); x.arcTo(l, h, l, 0, 12); x.arcTo(l, 0, l + w, 0, 12); x.fill();
+  x.fillStyle = color; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(text, DYN_W / 2, h / 2 + 2);
+  tex.needsUpdate = true;
+}
+function disposeDynLabel(s) { if (s.userData.dyn) { s.userData.dyn.tex.dispose(); s.material.dispose(); } }
+
 // orient an object so its local +Y points along `up`
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
 function placeOnSurface(obj, up, r, spin = 0) {
@@ -450,6 +480,7 @@ function disposeWorld(w) {
   w.scene.traverse(o => {
     if (o.geometry && !sharedGeos.has(o.geometry)) o.geometry.dispose();
     if (o.material && !sharedMats.has(o.material)) o.material.dispose();
+    if (o.userData && o.userData.dyn) o.userData.dyn.tex.dispose();
   });
   if (w.sun.shadow.map) w.sun.shadow.map.dispose();
 }
