@@ -34,6 +34,9 @@
 - Changes are saved per planet/moon and come back when you return; the ground recolours to match its new height (dig below sea level and it floods)
 - Samples, mining spots and drills move with the ground; the landing pad can't be terraformed
 
+### Stage 6: lander visibility
+- The LANDER label and its radar marker only appear within 50 m of the lander; further away you have to find your own way back
+
 ## v0.2 (prompt 2)
 - Rebuilt as a **3D third-person** game (Three.js): hilly low-poly terrain, liquid pools, and an orbiting camera behind your researcher
 - Every object is one simple form with a **name label above it**: plants = cones, rocks = rough stones, minerals = spinning glowing crystals, fossils = rings, plus the lander and your researcher

@@ -88,6 +88,9 @@ function floater(pos, up, text, color = '#fff') {
 
 // ---------- gameplay ----------
 const atLander = () => player.pos.distanceTo(world.landerPos) < LANDER_R;
+// the lander's marker only shows up when you're close to it
+const LANDER_SHOW = 50;
+const landerVisible = () => player.pos.distanceTo(world.landerPos) < LANDER_SHOW;
 
 function doScan() {
   if (menu || scanT > 0) return;
@@ -448,7 +451,7 @@ function syncScene() {
   world.sun.position.copy(player.pos).addScaledVector(SUN_DIR, 90);
   world.sun.target.position.copy(player.pos);
   world.lander.beacon.material.color.setHex(Math.sin(time * 4) > 0 ? 0xff4040 : 0x501010);
-  world.landerLabel.visible = opts.labels !== 'off' && player.pos.distanceTo(world.landerPos) < 150;
+  world.landerLabel.visible = opts.labels !== 'off' && landerVisible();
 
   const maxD = LABEL_DIST[opts.labels];
   for (const it of world.items) {

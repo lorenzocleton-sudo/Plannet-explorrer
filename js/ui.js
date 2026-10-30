@@ -325,7 +325,7 @@ function drawHUD(dt) {
       hx.fillStyle = sp.res.color; hx.strokeStyle = sp.drill ? '#ffc23a' : '#000';
       hx.beginPath(); hx.moveTo(p[0], p[1] - 5); hx.lineTo(p[0] + 4, p[1]); hx.lineTo(p[0], p[1] + 5); hx.lineTo(p[0] - 4, p[1]); hx.closePath(); hx.fill(); hx.stroke();
     }
-    const lp = radarPoint(world.landerPos, cx, cy, rad);
+    const lp = landerVisible() && radarPoint(world.landerPos, cx, cy, rad);
     if (lp) { hx.fillStyle = '#ff5d5d'; hx.fillRect(lp[0] - 3.5, lp[1] - 3.5, 7, 7); }
     // player arrow (camera always looks "up" on the radar)
     const fa = Math.atan2(player.face.dot(_rr.copy(player.fwd).cross(player.up)), player.face.dot(player.fwd));
