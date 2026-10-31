@@ -69,7 +69,7 @@ function groundKind() {
   if (player.inLiquid) return 'water';
   if (world.landerPos.distanceTo(player.pos) < LANDER_R) return 'metal';
   const B = world.body, d = player.up, h = groundH(d);
-  if (world.hasSea && h < 0.3) return 'water';
+  if (world.hasSea && h < 0.3) return world.frozen ? 'snow' : 'water'; // frozen seas crunch like ice
   let w;
   if (B.type === 'planet') { planetGroundColor(B, d, h, 1); w = planetLayers(B, h, 1, _gf); }
   else w = moonLayers(B, d, biomeOf(B, h, d), h, 1);
@@ -160,7 +160,7 @@ function updateAudio(dt) {
   seaT -= dt;
   if (seaT <= 0) {
     seaT = 0.5; seaNear = 0;
-    if (world.hasSea && !airless) {
+    if (world.hasSea && !world.frozen && !airless) {
       const t1 = tangentOf(player.up, _au), t2 = _au2.copy(player.up).cross(t1);
       for (let i = 0; i < 8 && !seaNear; i++) for (const r of [12, 30, 55]) {
         const a = i / 8 * Math.PI * 2;

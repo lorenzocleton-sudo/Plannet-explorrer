@@ -74,6 +74,8 @@ const planetOf = b => b.type === 'planet' ? b : b.parent;
 const FLORA_PROFILE = { Verdara: 'earth', Glacia: 'earthCold', Ruska: 'alienDry', 'Xeno Prime': 'alienWet' };
 const floraProfile = b => b.type === 'planet' && b.atmo ? (FLORA_PROFILE[b.name] || 'alienWet') : 'none';
 const hasPlants = b => floraProfile(b) !== 'none';
+// seas on very cold planets (Glacia, Umbros) are frozen solid: you walk, drive and build on the ice
+const frozenSea = b => b.type === 'planet' && b.temp && b.temp.base < -20;
 function isUnlocked(b) { return save.unlocked.includes(planetOf(b).idx); }
 
 // ---------- procedural species ----------

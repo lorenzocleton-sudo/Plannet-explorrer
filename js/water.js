@@ -24,7 +24,7 @@ const WATER_FRAG = `
 #include <fog_pars_fragment>
 #include <logdepthbuf_pars_fragment>
 uniform vec3 uShallow, uDeep, uSky, uSun, uSunCol;
-uniform float uTime, uLight, uWaves;
+uniform float uTime, uLight, uWaves, uIce;
 varying float vDepth;
 varying vec3 vWorld;
 float h3(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -76,6 +76,17 @@ void main() {
   col = col * uLight + uSunCol * spec * smoothstep(-0.05, 0.1, dot(up, uSun));
   // a film of water only a few cm deep fades out instead of shimmering over the mud
   gl_FragColor = vec4(col, clamp(alpha + spec * 0.5, 0.0, 1.0) * smoothstep(0.0, 0.18, depth));
+  if (uIce > 0.5) {
+    // frozen sea: solid, opaque ice with frosty patches and faint cracks (no waves, no foam)
+    float fr = vn(vWorld * 0.08) * 0.6 + vn(vWorld * 0.6) * 0.3 + vn(vWorld * 3.0) * 0.1;
+    float crack = smoothstep(0.012, 0.0, abs(vn(vWorld * 0.25) - 0.5)) * 0.15 * nearF;
+    vec3 ice = mix(vec3(0.52, 0.68, 0.78), vec3(0.88, 0.94, 0.98), smoothstep(0.3, 0.75, fr)) * mix(vec3(1.0), uShallow * 1.5, 0.2);
+    ice *= 1.0 - crack;
+    float iceFres = 0.04 + 0.5 * pow(1.0 - max(dot(up, v), 0.0), 5.0);
+    ice = mix(ice, uSky, iceFres * 0.4);
+    float ispec = pow(max(dot(reflect(-uSun, up), v), 0.0), 60.0) * 0.5;
+    gl_FragColor = vec4(ice * uLight + uSunCol * ispec * smoothstep(-0.05, 0.1, dot(up, uSun)), 1.0);
+  }
   #include <fog_fragment>
 }`;
 
@@ -87,7 +98,7 @@ function makeWaterMaterial(body) {
     vertexShader: WATER_VERT, fragmentShader: WATER_FRAG,
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       uShallow: { value: shallow }, uDeep: { value: deep }, uSky: { value: new THREE.Color(body.atmo ? body.atmo.color : '#101018') },
-      uSun: { value: SUN_DIR.clone() }, uSunCol: { value: new THREE.Color(0xfff2d8) }, uTime: { value: 0 }, uLight: { value: 1 }, uWaves: { value: 1 },
+      uSun: { value: SUN_DIR.clone() }, uSunCol: { value: new THREE.Color(0xfff2d8) }, uTime: { value: 0 }, uLight: { value: 1 }, uWaves: { value: 1 }, uIce: { value: frozenSea(body) ? 1 : 0 },
     }]),
     transparent: true, depthWrite: false, fog: true,
   });

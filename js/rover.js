@@ -126,8 +126,8 @@ function driveRover(dt, f, r) {
   sceneryContact(rover.pos, nu, 1.5, rover.vel);
   nu.copy(rover.pos).normalize();
   const gh = groundH(nu);
-  const floor = (world.hasSea ? Math.max(R + gh, R - 1.4) : R + gh) + ROVER_WHEEL;
-  player.inLiquid = world.hasSea && gh < -0.6;
+  const floor = (world.frozen ? R + Math.max(gh, 0) : world.hasSea ? Math.max(R + gh, R - 1.4) : R + gh) + ROVER_WHEEL;
+  player.inLiquid = world.hasSea && !world.frozen && gh < -0.6;
   const r0 = rover.pos.length();
   if (r0 <= floor) {
     // landing: bounce back up a little; much bouncier in low gravity

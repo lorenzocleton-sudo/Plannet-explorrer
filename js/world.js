@@ -366,7 +366,7 @@ const bodyColor = (b, biome) => { const [h, s, l] = b.col[biome]; return new THR
 // ---------- build a world ----------
 function genBody(body) {
   const R = body.R;
-  const w = { body, R, hasSea: body.type === 'planet', items: [], cells: new Map(), pulses: [], collected: new Set(save.collected[body.id] || []) };
+  const w = { body, R, hasSea: body.type === 'planet', frozen: frozenSea(body), items: [], cells: new Map(), pulses: [], collected: new Set(save.collected[body.id] || []) };
   world = w;
   const site = siteOf(body);
   w.L = site.L; w.siteH = site.h;

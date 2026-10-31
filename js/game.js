@@ -43,7 +43,7 @@ function flyStep(dt, move, up) {
   player.vel.copy(move).multiplyScalar(fs).addScaledVector(up, vUp * fs);
   player.pos.addScaledVector(player.vel, dt);
   const nu = _u.copy(player.pos).normalize();
-  const floorR = surfaceR(nu) + (world.hasSea ? -1 : 0);
+  const floorR = surfaceR(nu) + (world.hasSea && !world.frozen ? -1 : 0);
   if (player.pos.length() < floorR) player.pos.setLength(floorR);
   player.inLiquid = false;
   player.onGround = false;
@@ -390,12 +390,12 @@ function update(dt) {
     // ground contact (gravity always points to the centre)
     nu.copy(player.pos).normalize();
     const gh = groundH(nu);
-    let floorR = world.hasSea ? Math.max(R + gh, R - 1.0) : R + gh;
+    let floorR = world.frozen ? R + Math.max(gh, 0) : world.hasSea ? Math.max(R + gh, R - 1.0) : R + gh;
     // rocks and trees: bump into them, or stand on top of a low rock
     const rockTop = sceneryContact(player.pos, nu);
     if (rockTop > floorR) floorR = rockTop;
     nu.copy(player.pos).normalize();
-    player.inLiquid = world.hasSea && gh < -0.3 && rockTop === 0;
+    player.inLiquid = world.hasSea && !world.frozen && gh < -0.3 && rockTop === 0;
     const r0 = player.pos.length();
     if (r0 <= floorR || (player.onGround && r0 - floorR < 0.6 && vr <= 0.5)) {
       if (!player.onGround) {

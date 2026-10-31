@@ -23,23 +23,41 @@ const DETAIL = {
 const detail = () => DETAIL[opts.quality] || DETAIL.medium;
 // frame-rate goals per detail level; dynamic resolution scales the image down when we miss them
 const FPS_GOAL = { low: 30, medium: 45, high: 60 };
-let resScale = 1, resT = 0, fpsSlow = 60;
-const pixelRatio = () => Math.min(window.devicePixelRatio || 1, detail().px) * resScale;
+// The canvas itself is never resized for this (resizing a canvas flashes black on Android): when
+// the scale is below 1 the scene is drawn into a smaller off-screen image that is then stretched
+// over the screen. Decisions are slow and calm so the resolution doesn't bounce up and down.
+let resScale = 1, resT = 0, fpsSlow = 60, resHold = 8, lastUp = -1e9;
+const pixelRatio = () => Math.min(window.devicePixelRatio || 1, detail().px);
 function adaptResolution(dt) {
   if (dt <= 0 || dt > 0.25) return;  // ignore hiccups like switching apps
-  fpsSlow += (1 / dt - fpsSlow) * Math.min(1, dt * 1.5);   // smoothed over ~1 s
-  resT += dt;
-  if (resT < 1.5) return;                                    // re-check at most every 1.5 s
-  const goal = FPS_GOAL[opts.quality] || 45;
-  let next = resScale;
-  if (fpsSlow < goal * 0.9) next = Math.max(0.55, resScale - 0.1);
-  else if (fpsSlow > goal * 1.15 && resScale < 1) next = Math.min(1, resScale + 0.05);
+  fpsSlow += (1 / dt - fpsSlow) * Math.min(1, dt * 0.7);   // smoothed over ~2 s
+  resT += dt; resHold -= dt;
+  if (resT < 3 || resHold > 0) return;                       // re-check every 3 s, and not right after landing
+  const goal = FPS_GOAL[opts.quality] || 45, now = performance.now() / 1000;
   resT = 0;
-  if (next !== resScale) { resScale = next; renderer.setPixelRatio(pixelRatio()); renderer.setSize(VW, VH); }
+  if (fpsSlow < goal * 0.8) resScale = Math.max(0.55, resScale - 0.1);
+  // only go back up with plenty of headroom, and at most every 10 s, so it settles instead of see-sawing
+  else if (fpsSlow > goal * 1.35 && resScale < 1 && now - lastUp > 10) { resScale = Math.min(1, resScale + 0.05); lastUp = now; }
+}
+const RES = { rt: null, scene: null, cam: null };
+function renderScene(scene, cam) {
+  if (resScale >= 0.999) { renderer.render(scene, cam); return; }
+  const pr = renderer.getPixelRatio(), w = Math.max(1, Math.round(VW * pr * resScale)), h = Math.max(1, Math.round(VH * pr * resScale));
+  if (!RES.rt) {
+    RES.rt = new THREE.WebGLRenderTarget(w, h, { depthBuffer: true });
+    RES.scene = new THREE.Scene();
+    RES.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    RES.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: RES.rt.texture, depthTest: false, depthWrite: false })));
+  }
+  if (RES.rt.width !== w || RES.rt.height !== h) RES.rt.setSize(w, h);
+  renderer.setRenderTarget(RES.rt);
+  renderer.render(scene, cam);
+  renderer.setRenderTarget(null);
+  renderer.render(RES.scene, RES.cam);
 }
 function applyGraphics() {
   const D = detail();
-  resScale = 1;
+  resScale = 1; resHold = 8;
   renderer.setPixelRatio(pixelRatio());
   if (world && world.terrain && world.terrain.detailKey !== opts.quality) { resetTerrain(world); SCN.tiles.clear(); SCN.dirty = true; }
   if (typeof sceneryFade === 'function') sceneryFade();

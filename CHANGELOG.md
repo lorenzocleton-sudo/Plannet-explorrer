@@ -1,6 +1,10 @@
 # Changelog
 
 ## v0.7 (prompt 7: fixes, polish and new features)
+### Fixes after testing on the tablet
+- **Fix: the screen flashed black about every second after landing.** Dynamic resolution resized the game canvas whenever it changed the resolution, and on Android every canvas resize shows a black frame; right after landing it kept going down and up. The canvas is never resized now: a lower resolution is drawn into an off-screen image and stretched over the screen, and the resolution changes slowly and calmly (waits after landing, checks every 3 s, goes back up at most every 10 s)
+- **Fix: Glacia's ice could be walked half through.** Seas on very cold planets (Glacia, Umbros) were still liquid water. They are frozen solid now: opaque ice you walk, drive and build on, with icy footsteps and no wave sounds
+
 ### Part 5 (steps 9–10)
 - **Beacons**: a cheap building (2 iron plates, 1 copper wire) unlocked from the start. After placing one you name it and pick a colour (INTERACT to change it later). It glows, sends a faint light beam up into the sky and shows on the compass
 - **Compass**: a bar at the top of the screen with your heading, N/E/S/W (north follows the planet's axis) and markers for your beacons, the lander (only within 50 m), your rover and the points of interest you've discovered (mining deposits, uncovered fossils). The marker you're facing shows its name and distance

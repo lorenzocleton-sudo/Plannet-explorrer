@@ -25,7 +25,7 @@ function step(now) {
     if (!menu || menu === 'machine' || menu === 'build') factoryTick(dt * timeK());
     panelTick(dt);
     syncScene();
-    if (!window.NO_RENDER) renderer.render(world.scene, camera); // NO_RENDER: automated tests only
+    if (!window.NO_RENDER) renderScene(world.scene, camera); // NO_RENDER: automated tests only
     adaptResolution(raw);
   }
   if (!cutscene) drawHUD(dt);

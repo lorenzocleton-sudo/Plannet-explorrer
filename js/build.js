@@ -46,7 +46,7 @@ function checkPlacement(type, dir) {
     dir = spot.dir;
   }
   const h = groundH(dir), pos = dir.clone().multiplyScalar(R + h), res = { ok: false, dir, spot, pos };
-  if (world.hasSea && h < 0.3) return Object.assign(res, { reason: "Can't build in water" });
+  if (world.hasSea && !world.frozen && h < 0.3) return Object.assign(res, { reason: "Can't build in water" });
   if (pos.distanceTo(player.pos) > BUILD_REACH) return Object.assign(res, { reason: 'Too far away' });
   if (pos.distanceTo(world.landerPos) < LANDER_R + def.fp + 1) return Object.assign(res, { reason: 'Too close to the lander pad' });
   tangentOf(dir, _bn);
