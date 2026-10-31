@@ -2,7 +2,7 @@
 // ---------- game data: bodies, species, save, options ----------
 const VERSION = '0.7';
 // bump with every release so browsers fetch fresh models and textures
-const ASSET_V = '0.7.5';
+const ASSET_V = '0.7.7';
 
 const CATS = {
   plant:   { label: 'Plants',       one: 'Plant',   n: 4, base: 1,  tag: '#9ef08a' },

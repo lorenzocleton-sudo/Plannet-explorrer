@@ -1,6 +1,9 @@
 # Changelog
 
 ## v0.7 (prompt 7: fixes, polish and new features)
+### New ground texture on Verdara
+- Verdara's forest floors, bare soil, gravel and sea floor now use the rocky ground texture you uploaded (Poly Haven "Rocks Ground 02", CC0), with relief from its height map. It keeps its real photo colours instead of being tinted green; other worlds keep their own ground. Each world can now have its own set of ground textures
+
 ### Fixes after testing on the tablet
 - **Fix: the screen flashed black about every second after landing.** Dynamic resolution resized the game canvas whenever it changed the resolution, and on Android every canvas resize shows a black frame; right after landing it kept going down and up. The canvas is never resized now: a lower resolution is drawn into an off-screen image and stretched over the screen, and the resolution changes slowly and calmly (waits after landing, checks every 3 s, goes back up at most every 10 s)
 - **Fix: Glacia's ice could be walked half through.** Seas on very cold planets (Glacia, Umbros) were still liquid water. They are frozen solid now: opaque ice you walk, drive and build on, with icy footsteps and no wave sounds

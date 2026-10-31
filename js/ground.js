@@ -23,21 +23,37 @@ const BIOME_LAYERS = [
 const GROUND = {
   ready: false, size: 0,
   uniforms: {
-    uCol: { value: null }, uNrm: { value: null }, uAvg: { value: [] }, uRough: { value: LAYER_ROUGH },
+    uCol: { value: null }, uNrm: { value: null }, uAvg: { value: [] }, uRough: { value: LAYER_ROUGH }, uOwn: { value: new Array(9).fill(0) },
     uTexOn: { value: 0 }, uScale: { value: 1 / 3.2 }, uFar: { value: 200 }, uNrmOn: { value: 1 }, uNrmK: { value: 1 },
   },
 };
 for (let i = 0; i < NL; i++) GROUND.uniforms.uAvg.value.push(new THREE.Vector3(0.5, 0.5, 0.5));
 
 // load the images into array textures (size px per layer; smaller on Low detail)
-function loadGroundTextures(size) {
+// some worlds swap a layer for a texture of their own (Verdara: rocky soil instead of plain dirt and gravel)
+const PLANET_GROUND = { Verdara: { dirt: 'rockground', gravel: 'rockground' } };
+// textures that should look exactly like the photo (not tinted with the planet's colours)
+const OWN_COLOR = new Set(['rockground']);
+const groundFiles = body => GROUND_LAYERS.map(n => (body && PLANET_GROUND[body.name] || {})[n] || n);
+GROUND.files = groundFiles(null);
+// call when landing: switches the texture set if this world uses a different one
+function setGroundFor(body) {
+  const files = groundFiles(body);
+  if (files.join() === GROUND.files.join()) return;
+  GROUND.files = files;
+  if (GROUND.ready || GROUND.loading) loadGroundTextures(GROUND.size || detail().texSize, true);
+}
+const groundImg = {};
+function loadGroundTextures(size, force = false) {
   if (!renderer.capabilities.isWebGL2) return Promise.resolve(false); // old devices keep plain colours
-  if (GROUND.size === size && GROUND.ready) return Promise.resolve(true);
-  const load = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+  if (GROUND.size === size && GROUND.ready && !force) return Promise.resolve(true);
+  const gen = GROUND.gen = (GROUND.gen || 0) + 1, files = GROUND.files;
+  GROUND.loading = true;
+  const load = src => groundImg[src] || (groundImg[src] = new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }));
   const c = document.createElement('canvas'); c.width = c.height = size;
   const x = c.getContext('2d', { willReadFrequently: true });
   const col = new Uint8Array(size * size * 4 * NL), nrm = new Uint8Array(size * size * 4 * NL);
-  return Promise.all(GROUND_LAYERS.map((n, i) => Promise.all([load(`assets/textures/${n}_col.jpg?v=${ASSET_V}`), load(`assets/textures/${n}_nrm.jpg?v=${ASSET_V}`)]).then(([a, b]) => {
+  return Promise.all(files.map((n, i) => Promise.all([load(`assets/textures/${n}_col.jpg?v=${ASSET_V}`), load(`assets/textures/${n}_nrm.jpg?v=${ASSET_V}`)]).then(([a, b]) => {
     x.drawImage(a, 0, 0, size, size);
     const d = x.getImageData(0, 0, size, size).data;
     col.set(d, i * size * size * 4);
@@ -49,6 +65,9 @@ function loadGroundTextures(size) {
     x.drawImage(b, 0, 0, size, size);
     nrm.set(x.getImageData(0, 0, size, size).data, i * size * size * 4);
   }))).then(() => {
+    if (gen !== GROUND.gen) return false; // a newer texture set was asked for meanwhile
+    files.forEach((n, i) => { GROUND.uniforms.uOwn.value[i] = OWN_COLOR.has(n) ? 1 : 0; });
+    GROUND.loading = false;
     const mk = data => {
       const t = new THREE.DataArrayTexture(data, size, size, NL);
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -87,6 +106,7 @@ const GROUND_FRAG_PARS = `
 precision highp sampler2DArray;
 uniform sampler2DArray uCol, uNrm;
 uniform vec3 uAvg[9];
+uniform float uOwn[9]; // 1 = this layer keeps its own photo colour instead of taking the planet's tint
 uniform float uRough[9];
 uniform float uTexOn, uScale, uFar, uNrmOn, uNrmK;
 varying vec3 vW0, vW1, vW2, vGW, vGN;
@@ -104,14 +124,19 @@ float gTd = 0.0, gRough = roughness;
 vec3 gNrm = gN;
 float gDist = length(cameraPosition - vGW);
 gTd = uTexOn * smoothstep(uFar, uFar * 0.35, gDist);
+float gw[9];
+gw[0] = vW0.x; gw[1] = vW0.y; gw[2] = vW0.z; gw[3] = vW1.x; gw[4] = vW1.y; gw[5] = vW1.z; gw[6] = vW2.x; gw[7] = vW2.y; gw[8] = vW2.z;
+// layers that keep their own colour: how much of this spot they cover, and their average colour (used far away)
+float ownF = 0.0; vec3 ownAvg = vec3(0.0);
+for (int i = 0; i < 9; i++) { float o = gw[i] * uOwn[i] * uTexOn; ownF += o; ownAvg += uAvg[i] * o; }
+if (ownF > 0.0) ownAvg /= ownF;
+vec3 ownCol = ownAvg;
 if (gTd > 0.0) {
-  float gw[9];
-  gw[0] = vW0.x; gw[1] = vW0.y; gw[2] = vW0.z; gw[3] = vW1.x; gw[4] = vW1.y; gw[5] = vW1.z; gw[6] = vW2.x; gw[7] = vW2.y; gw[8] = vW2.z;
   vec3 bw = pow(abs(gN), vec3(8.0));
   bw /= (bw.x + bw.y + bw.z);
   vec3 p = vGW * uScale;
-  vec3 acc = vec3(0.0), nacc = vec3(0.0);
-  float wsum = 0.0, racc = 0.0;
+  vec3 acc = vec3(0.0), nacc = vec3(0.0), oacc = vec3(0.0);
+  float wsum = 0.0, racc = 0.0, owsum = 0.0;
   for (int i = 0; i < 9; i++) {
     float w = gw[i];
     if (w < 0.03) continue;
@@ -133,6 +158,7 @@ if (gTd > 0.0) {
     float hgt = dot(c, vec3(0.333));
     float bwgt = w * (0.35 + hgt) * (0.35 + hgt);
     acc += c / max(uAvg[i], vec3(0.05)) * bwgt;
+    oacc += c * bwgt * uOwn[i]; owsum += bwgt * uOwn[i];
     nacc += n * bwgt;
     racc += uRough[i] * bwgt;
     wsum += bwgt;
@@ -142,10 +168,16 @@ if (gTd > 0.0) {
     // keep the texture's light and shade fully, but only half of its own colour
     det = mix(vec3(dot(det, vec3(0.333))), det, 0.5);
     diffuseColor.rgb *= mix(vec3(1.0), clamp(det, 0.0, 2.2), gTd);
+    if (owsum > 0.0) ownCol = mix(ownAvg, oacc / owsum, gTd);
     gRough = mix(roughness, racc / wsum, gTd);
     if (uNrmOn > 0.5) gNrm = normalize(mix(gN, normalize(nacc), gTd));
   }
 }
+`;
+// after <color_fragment> (which multiplies in the planet's tint): photo-coloured layers replace the tint
+const GROUND_FRAG_OWN = `
+#include <color_fragment>
+if (ownF > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, ownCol, smoothstep(0.12, 0.5, ownF)); // where the photo layer is the main ground it shows fully
 `;
 // replaces <roughnessmap_fragment>
 const GROUND_FRAG_ROUGH = `
@@ -167,6 +199,7 @@ function makeGroundMaterial() {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + GROUND_FRAG_PARS)
       .replace('#include <map_fragment>', GROUND_FRAG_MAP)
+      .replace('#include <color_fragment>', GROUND_FRAG_OWN)
       .replace('#include <roughnessmap_fragment>', GROUND_FRAG_ROUGH)
       .replace('#include <normal_fragment_maps>', GROUND_FRAG_NORMAL);
   };
