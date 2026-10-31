@@ -14,7 +14,7 @@ function toggleFly() {
   if (!debugOn()) return;
   flying = !flying;
   if (!flying) { player.fallTop = player.pos.length(); player.vel.set(0, 0, 0); }
-  toast(flying ? (isTouch ? 'Fly mode on (JUMP up, INTERACT down)' : 'Fly mode on (Space up, X down, Shift fast, V to stop)') : 'Fly mode off');
+  toast(flying ? (PAD.active ? 'Fly mode on (A up, B down, L3 fast)' : isTouch ? 'Fly mode on (JUMP up, INTERACT down)' : 'Fly mode on (Space up, X down, Shift fast, V to stop)') : 'Fly mode off');
   applyDebug();
 }
 function teleportToLander() {

@@ -212,10 +212,10 @@ addEventListener('keydown', e => {
 promptHooks.unshift(() => {
   if (!build.active) return '';
   if (build.mode === 'remove') {
-    if (!build.target) return 'Deconstruct: aim at a building · ' + (isTouch ? 'CANCEL to stop' : '[Esc] to stop');
-    return `Hold ${isTouch ? 'REMOVE' : '[E]'} to deconstruct the ${build.target.def.name} (materials come back)` + (build.holdT > 0 ? ` ${Math.round(build.holdT / REMOVE_HOLD * 100)}%` : '');
+    if (!build.target) return 'Deconstruct: aim at a building · ' + (PAD.active ? '(B) to stop' : isTouch ? 'CANCEL to stop' : '[Esc] to stop');
+    return `Hold ${PAD.active ? '(X)' : isTouch ? 'REMOVE' : '[E]'} to deconstruct the ${build.target.def.name} (materials come back)` + (build.holdT > 0 ? ` ${Math.round(build.holdT / REMOVE_HOLD * 100)}%` : '');
   }
   const def = MACHINES[build.type], c = build.check;
-  const how = isTouch ? 'PLACE · ROTATE · CANCEL' : '[E] place · [R] rotate · [X] deconstruct · [Esc] cancel';
+  const how = PAD.active ? '(X) place · (LB/RB) rotate · (Y) deconstruct · (B) done' : isTouch ? 'PLACE · ROTATE · CANCEL' : '[E] place · [R] rotate · [X] deconstruct · [Esc] cancel';
   return `${def.name}: ${c && c.ok ? how : (c && c.reason) || 'Aim at the ground'}`;
 });

@@ -1,6 +1,6 @@
 'use strict';
 // ---------- game data: bodies, species, save, options ----------
-const VERSION = '0.7';
+const VERSION = '0.8';
 // bump with every release so browsers fetch fresh models and textures
 const ASSET_V = '0.7.7';
 

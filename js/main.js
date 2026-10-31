@@ -16,6 +16,7 @@ function step(now) {
   const raw = (now - last) / 1000, dt = Math.min(0.05, raw);
   last = now;
   fps += ((1 / Math.max(dt, 0.001)) - fps) * 0.05;
+  pollGamepad(dt);
   if (cutscene) {
     updateCutscene(dt);
     if (cutscene) { renderer.render(cutsceneScene(), camera); drawCutsceneOverlay(); }

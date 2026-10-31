@@ -2,7 +2,7 @@
 
 A 3D third-person survival factory game on huge round planets and moons. Survive the oxygen, heat and cold, mine ores and ice, build drills, smelters, solar power and fabricators, research upgrades, and refine rocket fuel to fly to the next world. Along the way you collect plants, rocks, minerals and buried traces of **ancient life** to earn research. Everything is a simple 3D form with its name floating above it.
 
-**Current version: v0.5**
+**Current version: v0.8**
 
 ## Play online
 The game is deployed automatically to GitHub Pages on every push to `main`:
@@ -29,6 +29,26 @@ Or open `index.html` in a browser. There's no install or build step, and it work
 | Any key / click | Skip a travel cutscene |
 
 **Touch (phones and tablets):** the joystick bottom-left moves you; drag the right side to look. Big buttons bottom-right: **Jump**, **Use** (current tool) and **Interact**. Tap the hotbar at the bottom to switch tools (🔨 opens the build menu). While building, the buttons become **Rotate**, **Place** (hold to remove in deconstruct mode) and **✕**.
+
+**Game controller (Xbox, PlayStation, Switch Pro or any standard pad, over USB or Bluetooth):** press any button once it's connected.
+
+| Button | Action |
+| --- | --- |
+| Left stick | Move (drive the rover) |
+| Right stick | Look around |
+| `A` / Cross | Jump |
+| `B` / Circle | Interact (hold to dig by hand; get out of the rover) |
+| `X` / Square or `RT` | Use the tool (hold to dig up fossils) |
+| `LT` | Quick scanner pulse |
+| `LB` / `RB` or D-pad ◀ ▶ | Switch tool |
+| `Y` / Triangle | Build menu |
+| D-pad ▲ | Star map (at the lander) |
+| View / Select | Research codex |
+| Start / Options | Pause |
+| While building | `X` place · `LB`/`RB` rotate · `Y` deconstruct mode · `B` done |
+| In menus | D-pad / left stick move the highlight · `A` press · `B` back · ◀ ▶ change sliders and lists · right stick scrolls |
+
+The touch buttons hide while you use the controller and come back when you touch the screen. In admin mode: D-pad ▼ fly (`A` up, `B` down, `L3` fast), `R3` teleport to the lander.
 
 ### How to play
 1. **Survive.** Your suit's oxygen drains unless the air is breathable; refill at the lander or near an Oxygen Generator. Some worlds are scorching by day or freezing at night: extreme heat and cold hurt unless you have the Heat or Cold Suit. Falls hurt based on height × gravity.

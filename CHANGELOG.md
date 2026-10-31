@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8 (prompt 8: controller support)
+- **Game controllers** work everywhere (Gamepad API, standard Xbox / PlayStation / Switch Pro layout, USB or Bluetooth, also on the Android tablet): left stick move, right stick look, A jump, B interact, X or RT use, LT scanner pulse, LB/RB switch tool, Y build menu, View codex, D-pad up star map, Start pause. While building: X place, LB/RB rotate, Y deconstruct mode, B done. Any button skips a travel cutscene
+- **Menus with the controller**: a glowing highlight moves with the D-pad or left stick, A presses, B goes back, left/right change sliders and lists, the right stick scrolls long panels. The highlight stays in place while machine panels refresh
+- Prompts and HUD hints switch to controller buttons while you use one; the touch buttons hide and come back when you touch the screen. A message shows when a controller connects or disconnects (disconnecting pauses the game)
+
 ## v0.7 (prompt 7: fixes, polish and new features)
 ### New ground texture on Verdara
 - Verdara's forest floors, bare soil, gravel and sea floor now use the rocky ground texture you uploaded (Poly Haven "Rocks Ground 02", CC0), with relief from its height map. It keeps its real photo colours instead of being tinted green; other worlds keep their own ground. Each world can now have its own set of ground textures

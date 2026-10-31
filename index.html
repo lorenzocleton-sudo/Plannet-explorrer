@@ -181,6 +181,9 @@
   body.touch #joy{background:radial-gradient(circle,rgba(255,255,255,.04),rgba(255,255,255,.08));border:1.5px solid rgba(190,230,255,.35)}
   #joyKnob{background:rgba(190,230,255,.28);border:1.5px solid rgba(190,230,255,.6)}
   #fatal{background:rgba(40,10,18,.9);border:1px solid rgba(255,107,125,.6);border-radius:18px}
+  /* game controller: highlight for menu navigation; touch buttons hide while a controller is in use */
+  .padfocus{outline:2px solid var(--acc)!important;outline-offset:3px;box-shadow:0 0 18px rgba(127,214,255,.55)!important}
+  body.pad #touch,body.pad #joy,body.pad #tPause,body.pad #buildBar,body.pad #adminBar{display:none!important}
   #tAct .tico svg{display:block;width:26px;height:26px;margin:0 auto 2px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
@@ -220,6 +223,7 @@
       <li><kbd>C</kbd> research codex</li>
       <li><kbd>M</kbd> star map (at lander)</li>
       <li><kbd>Esc</kbd> / <kbd>P</kbd> pause</li>
+      <li><kbd>🎮 Controller</kbd> left stick move · right stick look · <kbd>A</kbd> jump · <kbd>B</kbd> interact · <kbd>X</kbd>/<kbd>RT</kbd> use · <kbd>LT</kbd> scan · <kbd>LB</kbd>/<kbd>RB</kbd> tool · <kbd>Y</kbd> build · <kbd>Start</kbd> pause</li>
     </ul>
     <p class="muted" style="font-size:13px">Planets and moons are round: walk all the way around them! Each world has its own gravity, and you only find out if the air is breathable once you land. Watch your oxygen! Seas slow you down and drain oxygen faster. If you black out, a rescue drone brings you back, but your carried samples are lost.</p>
     <div class="row">
@@ -255,7 +259,7 @@
       <label for="aFast">Fast machines and free travel</label><input type="checkbox" id="aFast">
       <label for="aTime">Time speed <span class="val" id="vTime">1×</span></label><input type="range" id="aTime" min="1" max="100" step="1" value="1">
     </div>
-    <p class="muted" style="font-size:13px">Flying: on touch, JUMP goes up and INTERACT goes down. Keys: <kbd>V</kbd> fly (<kbd>Space</kbd> up, <kbd>X</kbd> down, <kbd>Shift</kbd> fast), <kbd>T</kbd> teleport.</p>
+    <p class="muted" style="font-size:13px">Flying: on touch, JUMP goes up and INTERACT goes down. Controller: D-pad down fly, <kbd>A</kbd> up, <kbd>B</kbd> down, <kbd>L3</kbd> fast, <kbd>R3</kbd> teleport. Keys: <kbd>V</kbd> fly (<kbd>Space</kbd> up, <kbd>X</kbd> down, <kbd>Shift</kbd> fast), <kbd>T</kbd> teleport.</p>
     <div class="stack">
       <button class="ghost" id="aTeleport">Teleport to lander</button>
       <button class="ghost" id="aUnlock">Unlock all planets &amp; moons</button>
@@ -325,37 +329,38 @@
   </div>
 </div>
 
-<script src="lib/three.min.js?v=0.7.7"></script>
-<script src="lib/GLTFLoader.js?v=0.7.7"></script>
-<script src="js/util.js?v=0.7.7"></script>
-<script src="js/data.js?v=0.7.7"></script>
-<script src="js/items.js?v=0.7.7"></script>
-<script src="js/biomes.js?v=0.7.7"></script>
-<script src="js/world.js?v=0.7.7"></script>
-<script src="js/water.js?v=0.7.7"></script>
-<script src="js/ground.js?v=0.7.7"></script>
-<script src="js/terrain.js?v=0.7.7"></script>
-<script src="js/nature.js?v=0.7.7"></script>
-<script src="js/scenery.js?v=0.7.7"></script>
-<script src="js/sky.js?v=0.7.7"></script>
-<script src="js/skybodies.js?v=0.7.7"></script>
-<script src="js/render.js?v=0.7.7"></script>
-<script src="js/game.js?v=0.7.7"></script>
-<script src="js/astronaut.js?v=0.7.7"></script>
-<script src="js/mining.js?v=0.7.7"></script>
-<script src="js/factory.js?v=0.7.7"></script>
-<script src="js/build.js?v=0.7.7"></script>
-<script src="js/sim.js?v=0.7.7"></script>
-<script src="js/rover.js?v=0.7.7"></script>
-<script src="js/panels.js?v=0.7.7"></script>
-<script src="js/tech.js?v=0.7.7"></script>
-<script src="js/ui.js?v=0.7.7"></script>
-<script src="js/starmap.js?v=0.7.7"></script>
-<script src="js/cutscene.js?v=0.7.7"></script>
-<script src="js/debug.js?v=0.7.7"></script>
-<script src="js/audio.js?v=0.7.7"></script>
-<script src="js/beacons.js?v=0.7.7"></script>
-<script src="js/weather.js?v=0.7.7"></script>
-<script src="js/main.js?v=0.7.7"></script>
+<script src="lib/three.min.js?v=0.8.0"></script>
+<script src="lib/GLTFLoader.js?v=0.8.0"></script>
+<script src="js/util.js?v=0.8.0"></script>
+<script src="js/data.js?v=0.8.0"></script>
+<script src="js/items.js?v=0.8.0"></script>
+<script src="js/biomes.js?v=0.8.0"></script>
+<script src="js/world.js?v=0.8.0"></script>
+<script src="js/water.js?v=0.8.0"></script>
+<script src="js/ground.js?v=0.8.0"></script>
+<script src="js/terrain.js?v=0.8.0"></script>
+<script src="js/nature.js?v=0.8.0"></script>
+<script src="js/scenery.js?v=0.8.0"></script>
+<script src="js/sky.js?v=0.8.0"></script>
+<script src="js/skybodies.js?v=0.8.0"></script>
+<script src="js/render.js?v=0.8.0"></script>
+<script src="js/game.js?v=0.8.0"></script>
+<script src="js/astronaut.js?v=0.8.0"></script>
+<script src="js/mining.js?v=0.8.0"></script>
+<script src="js/factory.js?v=0.8.0"></script>
+<script src="js/build.js?v=0.8.0"></script>
+<script src="js/sim.js?v=0.8.0"></script>
+<script src="js/rover.js?v=0.8.0"></script>
+<script src="js/panels.js?v=0.8.0"></script>
+<script src="js/tech.js?v=0.8.0"></script>
+<script src="js/ui.js?v=0.8.0"></script>
+<script src="js/starmap.js?v=0.8.0"></script>
+<script src="js/cutscene.js?v=0.8.0"></script>
+<script src="js/debug.js?v=0.8.0"></script>
+<script src="js/audio.js?v=0.8.0"></script>
+<script src="js/beacons.js?v=0.8.0"></script>
+<script src="js/weather.js?v=0.8.0"></script>
+<script src="js/gamepad.js?v=0.8.0"></script>
+<script src="js/main.js?v=0.8.0"></script>
 </body>
 </html>

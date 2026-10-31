@@ -335,7 +335,7 @@ function drawHUD(dt) {
     const vr = rover.vel.dot(player.up), sp = Math.sqrt(Math.max(0, rover.vel.lengthSq() - vr * vr));
     row('rover', rover.rec.charge / 100, rover.rec.charge < 15 ? HUD_C.warn : HUD_C.o2, `${Math.round(rover.rec.charge)}% · ${Math.round(sp * 3.6)} KM/H${roverPowered() ? ' · CHARGING' : ''}`, rover.rec.charge < 10);
   }
-  row('scan', 1 - scanT / SCAN_CD, scanT > 0 ? HUD_C.dim : HUD_C.scan, scanT > 0 ? `${scanT.toFixed(1)}s` : (isTouch ? 'READY' : 'READY [Q]'));
+  row('scan', 1 - scanT / SCAN_CD, scanT > 0 ? HUD_C.dim : HUD_C.scan, scanT > 0 ? `${scanT.toFixed(1)}s` : (PAD.active ? 'READY (LT)' : isTouch ? 'READY' : 'READY [Q]'));
   const sig = fossilSignal();
   if (sig < 50) {
     const bars = sig < 15 ? 3 : sig < 30 ? 2 : 1;
@@ -450,7 +450,7 @@ function drawHUD(dt) {
     hudText(t, 22, VH - 44, 11, '#ffc23a', 'bold', 1.5);
   }
   hx.fillStyle = 'rgba(255,255,255,.45)'; hx.font = '11px system-ui,sans-serif'; hx.textBaseline = 'bottom';
-  hx.fillText(`Planet Explorer v${VERSION}` + (isTouch ? '' : ' · [Esc] Pause · [C] Codex') + (debugOn() ? ` · ${Math.round(fps)} FPS · ${Math.round(resScale * 100)}% res` : ''), 10, VH - 8);
+  hx.fillText(`Planet Explorer v${VERSION}` + (PAD.active ? ' · (Start) Pause · (View) Codex' : isTouch ? '' : ' · [Esc] Pause · [C] Codex') + (debugOn() ? ` · ${Math.round(fps)} FPS · ${Math.round(resScale * 100)}% res` : ''), 10, VH - 8);
   if (!isTouch && !document.pointerLockElement && !menu) {
     hx.textAlign = 'center'; hx.textBaseline = 'middle'; hx.font = '13px system-ui,sans-serif';
     hx.fillStyle = 'rgba(255,255,255,.6)'; hx.fillText('Click to capture the mouse for camera control', VW / 2, VH - 150);

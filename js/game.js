@@ -37,8 +37,8 @@ const debugOn = () => !!opts.debug;
 const timeK = () => debugOn() ? clamp(opts.timeScale || 1, 1, 100) : 1;
 const adminInfO2 = () => debugOn() && opts.infO2, adminGod = () => debugOn() && opts.god, adminFast = () => debugOn() && opts.fast;
 function flyStep(dt, move, up) {
-  const vUp = (keys.has(' ') || touchUp ? 1 : 0) - (keys.has('x') || keys.has('control') || touchDown ? 1 : 0);
-  const fs = FLY_SPEED * (keys.has('shift') ? 3 : 1);
+  const vUp = (keys.has(' ') || touchUp || PAD.up ? 1 : 0) - (keys.has('x') || keys.has('control') || touchDown || PAD.down ? 1 : 0);
+  const fs = FLY_SPEED * (keys.has('shift') || PAD.fast ? 3 : 1);
   jumpQueued = false;
   player.vel.copy(move).multiplyScalar(fs).addScaledVector(up, vUp * fs);
   player.pos.addScaledVector(player.vel, dt);
@@ -368,6 +368,7 @@ function update(dt) {
     const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.hypot(dx, dy);
     if (l > 8) { r += dx / Math.max(l, JOY_R); f -= dy / Math.max(l, JOY_R); }
   }
+  r += PAD.lx; f -= PAD.ly; // controller left stick (gamepad.js)
   const move = _m.set(0, 0, 0).addScaledVector(player.fwd, f).addScaledVector(right, r);
   const len = move.length();
   if (len > 1) move.divideScalar(len);
@@ -451,11 +452,11 @@ function update(dt) {
   // tools
   scanT = Math.max(0, scanT - dt);
   pickCd -= dt; fullWarnT -= dt;
-  const act = keys.has('e') || mouseUse || touchAct || tapAct;
+  const act = keys.has('e') || mouseUse || touchAct || tapAct || padAct;
   const pressed = act && !actPrev;
   actPrev = act;
   // Interact (F / INTERACT): the lander, a machine, a deposit or the nearest sample - whatever is closest at hand
-  const inter = !flying && (keys.has('f') || touchInteract || tapInteract);
+  const inter = !flying && (keys.has('f') || touchInteract || tapInteract || padInter);
   tapAct = tapInteract = false;
   const iPressed = inter && !interPrev;
   interPrev = inter;
